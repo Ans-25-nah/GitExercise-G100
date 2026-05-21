@@ -12,16 +12,29 @@ pygame.display.set_caption("2 Player Shooter")
 
 clock = pygame.time.Clock()
 
-WHITE = (255, 255, 255)
+# -------------------------
+# LOAD IMAGES (FROM YOUR FOLDER)
+# -------------------------
+background = pygame.image.load("background.png")
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+
+player1_img = pygame.image.load("player1.png").convert_alpha()
+player1_img = pygame.transform.scale(player1_img, (50, 50))
+
+player2_img = pygame.image.load("player2.png").convert_alpha()
+player2_img = pygame.transform.scale(player2_img, (50, 50))
+
+enemy_img = pygame.image.load("enemy.png").convert_alpha()
+enemy_img = pygame.transform.scale(enemy_img, (40, 40))
+
 BLACK = (0, 0, 0)
 
 # -------------------------
 # PLAYER CLASS
 # -------------------------
 class Soldier:
-    def __init__(self, x, y, color, controls):
-        self.image = pygame.Surface((50, 50))
-        self.image.fill(color)
+    def __init__(self, x, y, image, controls):
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.speed = 5
@@ -84,20 +97,20 @@ class Enemy:
         self.rect = pygame.Rect(x, y, 40, 40)
 
     def draw(self):
-        pygame.draw.rect(screen, (255, 0, 0), self.rect)
+        screen.blit(enemy_img, self.rect)
 
 
 # -------------------------
-# PLAYERS
+# CREATE PLAYERS
 # -------------------------
-player1 = Soldier(200, 500, (0, 0, 255), {
+player1 = Soldier(200, 500, player1_img, {
     "up": pygame.K_w,
     "down": pygame.K_s,
     "left": pygame.K_a,
     "right": pygame.K_d
 })
 
-player2 = Soldier(600, 500, (0, 255, 0), {
+player2 = Soldier(600, 500, player2_img, {
     "up": pygame.K_UP,
     "down": pygame.K_DOWN,
     "left": pygame.K_LEFT,
@@ -127,20 +140,22 @@ def throw_grenade(player):
 running = True
 while running:
     clock.tick(60)
-    screen.fill(WHITE)
+
+    # DRAW BACKGROUND
+    screen.blit(background, (0, 0))
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
         if event.type == pygame.KEYDOWN:
-            # Player 1 shoot / grenade
+            # Player 1
             if event.key == pygame.K_SPACE:
                 shoot(player1)
             if event.key == pygame.K_q:
                 throw_grenade(player1)
 
-            # Player 2 shoot / grenade
+            # Player 2
             if event.key == pygame.K_RETURN:
                 shoot(player2)
             if event.key == pygame.K_RSHIFT:
@@ -162,7 +177,7 @@ while running:
         if grenade.y > HEIGHT:
             grenades.remove(grenade)
 
-    # Collision (bullets)
+    # Collision
     for bullet in bullets[:]:
         for enemy in enemies[:]:
             if enemy.rect.collidepoint(bullet.x, bullet.y):
@@ -170,7 +185,6 @@ while running:
                 enemies.remove(enemy)
                 break
 
-    # Collision (grenades)
     for grenade in grenades[:]:
         for enemy in enemies[:]:
             if enemy.rect.collidepoint(grenade.x, grenade.y):
@@ -178,7 +192,7 @@ while running:
                 enemies.remove(enemy)
                 break
 
-    # Draw everything
+    # DRAW OBJECTS
     player1.draw()
     player2.draw()
 
@@ -194,4 +208,4 @@ while running:
     pygame.display.update()
 
 pygame.quit()
-sys.exit()
+sys.exit() 
