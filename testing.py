@@ -1,10 +1,10 @@
 import pygame
-import sys
-import math
-import random
-import os
+import sys #exit
+import math #distance calc for enemy
+import random #ai enemy spawn
+import os #read file for image
 
-pygame.init()
+pygame.init() #default
 
 # ============================================
 # SCREEN SETUP
@@ -16,7 +16,7 @@ HEIGHT = 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("SUPERHOT Prototype")
 
-clock = pygame.time.Clock()
+clock = pygame.time.Clock() #fps
 FPS = 60
 
 # ============================================
@@ -43,7 +43,7 @@ enemy_speed = 1
 shoot_delay = 90
 
 # ============================================
-# FONT
+# FONT #size
 # ============================================
 
 font = pygame.font.Font(None, 42)
@@ -55,9 +55,9 @@ small_font = pygame.font.Font(None, 28)
 
 bg_img = pygame.image.load(
     'img/background1/background.png'
-).convert()
+).convert() #convert format -faster
 
-bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
+bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT)) #adjust size image
 
 bullet_img = pygame.image.load(
     'img/icons/bullet.png'
@@ -102,15 +102,15 @@ start_btn_rect = pygame.Rect(300, 320, 200, 50)
 
 def draw_text(text, font, text_col, x, y):
 
-    img = font.render(text, True, text_col)
+    img = font.render(text, True, text_col) #let text to img
 
-    screen.blit(img, (x, y))
+    screen.blit(img, (x, y)) #draw on screen
 
 # ============================================
 # PLAYER CLASS
 # ============================================
 
-class Player(pygame.sprite.Sprite):
+class Player(pygame.sprite.Sprite): #sprite - adjustable player
 
     def __init__(self, x, y, speed, health):
 
@@ -126,7 +126,7 @@ class Player(pygame.sprite.Sprite):
         self.direction = 1
         self.flip = False
 
-        self.animation_list = []
+        self.animation_list = [] #save all scene
 
         self.frame_index = 0
 
@@ -143,12 +143,13 @@ class Player(pygame.sprite.Sprite):
 
             temp_list = []
 
+            #read how much pic in file
             num_of_frames = len(
                 os.listdir(f'img/player1/{animation}')
             )
 
             for i in range(num_of_frames):
-
+                #load every pic in the file
                 img = pygame.image.load(
                     f'img/player1/{animation}/{i}.png'
                 ).convert_alpha()
@@ -160,13 +161,13 @@ class Player(pygame.sprite.Sprite):
 
                 temp_list.append(img)
 
-            self.animation_list.append(temp_list)
+            self.animation_list.append(temp_list) #save all action to a list
 
         self.image = self.animation_list[self.action][self.frame_index]
 
         self.rect = self.image.get_rect()
 
-        self.rect.center = (x, y)
+        self.rect.center = (x, y) #default place
 
     def update(self):
 
@@ -197,7 +198,7 @@ class Player(pygame.sprite.Sprite):
             self.flip = False
             self.direction = 1
             moving = True
-
+        #force cannot go outside the screen
         self.rect.x = max(
             0,
             min(WIDTH - self.rect.width, self.rect.x)
@@ -238,7 +239,7 @@ class Player(pygame.sprite.Sprite):
             self.update_time = pygame.time.get_ticks()
 
             self.frame_index += 1
-
+        #loop
         if self.frame_index >= len(self.animation_list[self.action]):
 
             if self.action == 2:
@@ -347,7 +348,7 @@ class Enemy(pygame.sprite.Sprite):
         if not self.alive:
             return
 
-        dx = player.rect.centerx - self.rect.centerx
+        dx = player.rect.centerx - self.rect.centerx #move to player 
         dy = player.rect.centery - self.rect.centery
 
         distance = math.sqrt(dx * dx + dy * dy)
@@ -558,7 +559,7 @@ class ItemBox(pygame.sprite.Sprite):
 
     def update(self):
 
-        if pygame.sprite.collide_rect(self, player):
+        if pygame.sprite.collide_rect(self, player): #if player collect item
 
             if self.item_type == 'Health':
 
@@ -653,7 +654,7 @@ def create_enemy():
     enemy_group.add(enemy)
 
 # ============================================
-# START LEVEL
+# START LEVEL 
 # ============================================
 
 def start_level(current_level):
