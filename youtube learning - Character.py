@@ -26,7 +26,7 @@ grenade = False
 grenade_thrown = False
 
 #load images
-#bulet
+#bullet
 
 bullet_img = pygame.image.load('img/icons/bullet.png').convert_alpha()
 bullet_img = pygame.transform.scale(bullet_img, (20, 30))
