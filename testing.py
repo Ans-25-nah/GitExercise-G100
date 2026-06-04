@@ -48,21 +48,21 @@ score_multiplier = 1
 next_level_ready = False
 
 # Member 2:balancing dificulty难度平衡）
-enemy_base_speed = 2.0
-enemy_shoot_delay = 90
-enemy_health_base = 100
-enemy_bullet_speed = 7.0
+enemy_base_speed = 2.0 #敌人移动的速度
+enemy_shoot_delay = 90 #射击间隔，越小shoot速度越快
+enemy_health_base = 100 #敌人生命值
+enemy_bullet_speed = 7.0 #敌人子弹的速度
 
-MAX_ENEMY_SPEED = 8.0
-MIN_SHOOT_DELAY = 25
-MAX_ENEMY_HEALTH = 200
-MAX_ENEMY_BULLET_SPEED = 12.0
+MAX_ENEMY_SPEED = 8.0 #敌人速度的limit (避免快到躲不了)
+MIN_SHOOT_DELAY = 25 #shooting的间隔下限 （最快每25秒射一次）
+MAX_ENEMY_HEALTH = 200 #敌人生命的limit
+MAX_ENEMY_BULLET_SPEED = 12.0 #敌人子弹速度的上限
 
 # Member 2: 当前难度值（跟着等级变化）
-current_enemy_speed = enemy_base_speed
-current_shoot_delay = enemy_shoot_delay
-current_enemy_health = enemy_health_base
-current_enemy_bullet_speed = enemy_bullet_speed
+current_enemy_speed = enemy_base_speed #当前敌人的速度，跟着level加
+current_shoot_delay = enemy_shoot_delay #当前射击延迟
+current_enemy_health = enemy_health_base #当前敌人生命
+current_enemy_bullet_speed = enemy_bullet_speed #当前子弹速度
 
 # Member 3:data for result screen
 total_shots = 0
@@ -71,9 +71,9 @@ total_kills = 0
 
 # ==================== FONTS ====================
 # Member 3: UI font
-font = pygame.font.Font(None, 42)
-small_font = pygame.font.Font(None, 28)
-large_font = pygame.font.Font(None, 64)
+font = pygame.font.Font(None, 42) #normal font ,size 42
+small_font = pygame.font.Font(None, 28) #small font, size 28
+large_font = pygame.font.Font(None, 64) #big font, size 64
 
 # ==================== LOAD IMAGES ====================
 bg_img = pygame.image.load('img/background1/background.png').convert()
@@ -87,16 +87,16 @@ health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
 # Member 3: start button area
-start_btn_rect = pygame.Rect(300, 320, 200, 50)
+start_btn_rect = pygame.Rect(300, 320, 200, 50) #rect place and size
 
 # Member 3: draw text
 def draw_text(text, font, text_col, x, y, center=False):
-    img = font.render(text, True, text_col)
+    img = font.render(text, True, text_col)  #let font become pic
     if center:
-        rect = img.get_rect(center=(x, y))
-        screen.blit(img, rect)
+        rect = img.get_rect(center=(x, y)) #center
+        screen.blit(img, rect) #draw it at middle
     else:
-        screen.blit(img, (x, y))
+        screen.blit(img, (x, y)) #draw
 
 # ==================== PLAYER CLASS ====================
 # Member 1: player movement and shooting
@@ -194,74 +194,76 @@ class Enemy(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.alive = True
         self.health = current_enemy_health        
-        self.direction = 1
-        self.flip = False
+        self.direction = 1 #方向 1右边，-1左边
+        self.flip = False #是否反转图片
         
-        self.animation_list = []
-        self.frame_index = 0
-        self.action = 0
-        self.update_time = pygame.time.get_ticks()
-        self.shoot_timer = random.randint(0, current_shoot_delay)   
+        self.animation_list = [] #存所有动画帧
+        self.frame_index = 0 #当前播放的帧
+        self.action = 0 #当前动作
+        self.update_time = pygame.time.get_ticks() #上一次更新动画的时间
+        self.shoot_timer = random.randint(0, current_shoot_delay)   #随机射击计时器
 
         for animation in ['Idle', 'Run', 'Death']:
             temp_list = []
-            num_of_frames = len(os.listdir(f'img/enemy1/{animation}'))
-            for i in range(num_of_frames):
+            num_of_frames = len(os.listdir(f'img/enemy1/{animation}')) #读取file里面图片数量
+            for i in range(num_of_frames): 
                 img = pygame.image.load(f'img/enemy1/{animation}/{i}.png').convert_alpha()
-                img = pygame.transform.scale(img, (80, 80))
-                temp_list.append(img)
-            self.animation_list.append(temp_list)
+                img = pygame.transform.scale(img, (80, 80)) #缩放到80x80
+                temp_list.append(img) #加入列表
+            self.animation_list.append(temp_list) #将整个动作序列加入动画列表
         self.image = self.animation_list[self.action][self.frame_index]
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
 
-    def update(self, time_scale):
+    def update(self, time_scale): #每帧更新
         self.update_animation()
-        self.check_alive()
-        if not self.alive:
+        self.check_alive() #检查是否死亡
+        if not self.alive: #if dead，不再移动/射击
             return
         
-        dx = player.rect.centerx - self.rect.centerx
-        dy = player.rect.centery - self.rect.centery
-        distance = math.hypot(dx, dy)
-        if distance > 0:
-            
+        #往玩家方向移动
+        dx = player.rect.centerx - self.rect.centerx #水平距离差
+        dy = player.rect.centery - self.rect.centery #垂直
+        distance = math.hypot(dx, dy) #欧氏距离
+        if distance > 0: #避免除以0
+            #移动：单位向量x当前敌人速度x时标（慢动作）
             self.rect.x += (dx / distance) * current_enemy_speed * time_scale
             self.rect.y += (dy / distance) * current_enemy_speed * time_scale
-        self.flip = dx < 0
-        self.update_action(1)          
+        self.flip = dx < 0 #如果复数 玩家在左边，反转照片
+        self.update_action(1) #设置为跑步动作（1）         
         
         self.shoot_timer += 1 * time_scale
         if self.shoot_timer >= current_shoot_delay and distance > 0:
             self.shoot_timer = 0
+            #create bullet ，方向指向玩家
             bullet = EnemyBullet(self.rect.centerx, self.rect.centery,
                                  dx/distance, dy/distance)
             enemy_bullet_group.add(bullet)
 
     def update_animation(self):
-        ANIMATION_COOLDOWN = 100
+        ANIMATION_COOLDOWN = 100 
         self.image = self.animation_list[self.action][self.frame_index]
         if pygame.time.get_ticks() - self.update_time > ANIMATION_COOLDOWN:
             self.update_time = pygame.time.get_ticks()
-            self.frame_index += 1
+            self.frame_index += 1 #下一帧
         if self.frame_index >= len(self.animation_list[self.action]):
             self.frame_index = 0 if self.action != 2 else len(self.animation_list[self.action]) - 1
 
-    def update_action(self, new_action):
+    def update_action(self, new_action): #换动作
         if new_action != self.action:
             self.action = new_action
             self.frame_index = 0
             self.update_time = pygame.time.get_ticks()
 
-    def check_alive(self):
+    def check_alive(self): #检查生命，if 死亡就加分，增加击杀数，random掉血包
         global score, total_kills
         if self.health <= 0 and self.alive:
             self.alive = False
-            self.update_action(2)
-            score += 25
-            total_kills += 1
+            self.update_action(2) #切换到死亡动画
+            score += 25 #增加分数
+            total_kills += 1 #击杀数加一
             # 随机掉落血包
-            if random.randint(1,3) == 1:
+            if random.randint(1,3) == 1: #三分之一的概率掉落血包
                 item_box_group.add(ItemBox('Health', self.rect.centerx, self.rect.centery))
 
     def draw(self):
@@ -294,44 +296,47 @@ class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy):
         super().__init__()
         self.speed = current_enemy_bullet_speed   # 难度影响子弹速度
-        self.dx = dx
-        self.dy = dy
-        self.image = enemy_bullet_img
-        self.rect = self.image.get_rect(center=(x, y))
+        self.dx = dx #水平方向
+        self.dy = dy #垂直方向
+        self.image = enemy_bullet_img 
+        self.rect = self.image.get_rect(center=(x, y)) #设置初始位置
 
     def update(self, time_scale):
-        self.rect.x += self.dx * self.speed * time_scale
-        self.rect.y += self.dy * self.speed * time_scale
-        if not self.rect.colliderect(0, 0, WIDTH, HEIGHT):
+        self.rect.x += self.dx * self.speed * time_scale #x方向移动
+        self.rect.y += self.dy * self.speed * time_scale #y方向移动
+        if not self.rect.colliderect(0, 0, WIDTH, HEIGHT): #if子弹超出screen，kill
             self.kill()
-        if self.rect.colliderect(player) and player.alive:
-            player.health -= 15          # 子弹伤害
-            self.kill()
+        if self.rect.colliderect(player) and player.alive: #如果hit玩家且玩家活着
+            player.health -= 15          # 子弹伤害（15）
+            self.kill() #子弹消失
 
 # Member 3: colectable item (health)
 class ItemBox(pygame.sprite.Sprite):
     def __init__(self, item_type, x, y):
         super().__init__()
-        self.item_type = item_type
-        self.image = item_boxes[item_type]
-        self.rect = self.image.get_rect(center=(x, y))
+        self.item_type = item_type 
+        self.image = item_boxes[item_type] #load pic
+        self.rect = self.image.get_rect(center=(x, y)) #set the place 
 
-    def update(self):
+    def update(self): #check if player collect it
         if self.rect.colliderect(player) and player.alive:
             if self.item_type == 'Health':
+                #add 25 health,not over max health
                 player.health = min(player.max_health, player.health + 25)
-            self.kill()
+            self.kill() #gone after collected 
 
 # ==================== HEALTH BAR ====================
 # Member 3: UI 血条
 class HealthBar:
     def __init__(self, x, y, health, max_health):
-        self.x = x
-        self.y = y
-        self.max_health = max_health
+        self.x = x #healthbar 左上角x 
+        self.y = y #healthbar 左上角y
+        self.max_health = max_health 
     def draw(self, health):
-        ratio = health / self.max_health
+        ratio = health / self.max_health #生命值比例
+        #draw red background
         pygame.draw.rect(screen, RED, (self.x, self.y, 150, 20))
+        #draw green front
         pygame.draw.rect(screen, GREEN, (self.x, self.y, 150 * ratio, 20))
 
 # ==================== GROUPS ====================
@@ -343,32 +348,39 @@ item_box_group = pygame.sprite.Group()
 
 # ==================== LEVEL & DIFFICULTY ====================
 # Member 2: enemy ai敌人生成、level关卡控制、难度平衡difficulty balancing
-def create_enemy():
-    side = random.choice(["top","bottom","left","right"])
-    if side == "top": x, y = random.randint(0, WIDTH), -50
-    elif side == "bottom": x, y = random.randint(0, WIDTH), HEIGHT + 50
-    elif side == "left": x, y = -50, random.randint(0, HEIGHT)
-    else: x, y = WIDTH + 50, random.randint(0, HEIGHT)
-    enemy_group.add(Enemy(x, y))
-
+def create_enemy(): 
+    #在screen外随机生成敌人
+    side = random.choice(["top","bottom","left","right"]) #随机选择边缘
+    if side == "top": x, y = random.randint(0, WIDTH), -50 #上方外部
+    elif side == "bottom": x, y = random.randint(0, WIDTH), HEIGHT + 50 #下方外部
+    elif side == "left": x, y = -50, random.randint(0, HEIGHT) #左侧外部
+    else: x, y = WIDTH + 50, random.randint(0, HEIGHT) #右侧外部
+    enemy_group.add(Enemy(x, y)) #create 敌人并加入组
+#开始指定level，清空all敌人，生成当前等级+1个敌人
 def start_level(current_level):
-    enemy_group.empty()
-    for _ in range(current_level + 1):
+    enemy_group.empty() #清空现有敌人
+    for _ in range(current_level + 1): #敌人数= 等级+1
         create_enemy()
 
 def next_level():
-    """难度平衡：每级增加敌人速度、减少射击延迟、增加生命值和子弹速度"""
+    #难度平衡：每级增加敌人速度、减少射击延迟、增加生命值和子弹速度
     global level, score_multiplier
     global current_enemy_speed, current_shoot_delay, current_enemy_health, current_enemy_bullet_speed
-    level += 1
+    level += 1 #等级加一
+    #敌人移动速度每level+0.25，不超过上限
     current_enemy_speed = min(current_enemy_speed + 0.25, MAX_ENEMY_SPEED)
+    #射击延迟每级-3帧，不低于下限
     current_shoot_delay = max(current_shoot_delay - 3, MIN_SHOOT_DELAY)
+    #敌人生命值每级+10，不超过上限
     current_enemy_health = min(current_enemy_health + 10, MAX_ENEMY_HEALTH)
+    #敌人子弹速度每级+0.2，不超过上限
     current_enemy_bullet_speed = min(current_enemy_bullet_speed + 0.2, MAX_ENEMY_BULLET_SPEED)
+    #得分倍数增加，让后期得分更快
     score_multiplier += 0.15
+    #清空所有子弹（必变残留）
     bullet_group.empty()
     enemy_bullet_group.empty()
-    start_level(level)
+    start_level(level) #生成新等级的敌人
 
 def reset_game():
     global player, health_bar, level, score, score_multiplier, game_state, next_level_ready
@@ -377,6 +389,7 @@ def reset_game():
     bullet_group.empty()
     enemy_bullet_group.empty()
     item_box_group.empty()
+    #重新create character
     player = Player(WIDTH//2, HEIGHT//2, 5, 100)
     health_bar = HealthBar(10, 10, player.health, player.max_health)
     level = 1
@@ -396,11 +409,12 @@ def reset_game():
 # ==================== UI SCREENS ====================
 # Member 3: result screen and next level screen
 def show_result_screen():
+    #命中率
     hit_rate = (total_hits / total_shots * 100) if total_shots > 0 else 0
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) #半透明黑色
     overlay.fill((0,0,0,180))
     screen.blit(overlay, (0,0))
-    draw_text("GAME OVER", large_font, RED, WIDTH//2, 80, center=True)
+    draw_text("GAME OVER", large_font, RED, WIDTH//2, 80, center=True) #标题
     stats = [
         f"Final Score: {int(score)}",
         f"Level Reached: {level}",
@@ -467,7 +481,7 @@ while True:
     # -------------------- update --------------------
     # Member 3: main menu
     if game_state == "START":
-        draw_text("SUPERHOT", font, WHITE, 250, 220)
+        draw_text("STILL——WORLD", font, WHITE, 250, 220)
         pygame.draw.rect(screen, GRAY, start_btn_rect)
         draw_text("Start Game", small_font, WHITE, start_btn_rect.x+45, start_btn_rect.y+15)
         draw_text("Click or Press Enter", small_font, WHITE, WIDTH//2, 420, center=True)
