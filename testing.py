@@ -10,7 +10,7 @@
 #   - Game Difficulty Balancing (调整敌人难度)
 #
 # Member 3 - ANSON:
-#   - Game state management (START, PLAYING, RESULT)
+#   - Game state management (START, PLAYING, TRANSITION,RESULT)
 #   - Score tracking system (Score increasing)
 #   - UI (Start button、health、score and ending screen)
 #   - End game data summary (Result Screen)
@@ -409,33 +409,244 @@ def reset_game():
 # ==================== UI SCREENS ====================
 # Member 3: result screen and next level screen
 def show_result_screen():
-    #命中率
-    hit_rate = (total_hits / total_shots * 100) if total_shots > 0 else 0
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) #半透明黑色
-    overlay.fill((0,0,0,180))
-    screen.blit(overlay, (0,0))
-    draw_text("GAME OVER", large_font, RED, WIDTH//2, 80, center=True) #标题
-    stats = [
-        f"Final Score: {int(score)}",
-        f"Level Reached: {level}",
-        f"Enemies Killed: {total_kills}",
-        f"Shots Fired: {total_shots}",
-        f"Shots Hit: {total_hits}",
-        f"Accuracy: {hit_rate:.1f}%"
-    ]
-    for i, stat in enumerate(stats):
-        color = YELLOW if i == 5 else WHITE
-        draw_text(stat, small_font, color, WIDTH//2, 180 + i*45, center=True)
-    draw_text("Press R to Restart", small_font, GREEN, WIDTH//2, 500, center=True)
-    draw_text("Press ESC to Quit", small_font, GRAY, WIDTH//2, 550, center=True)
 
-def show_level_transition():
+    # ===== Accuracy Calculation =====
+
+    # 计算命中率
+    hit_rate = (total_hits / total_shots * 100) if total_shots > 0 else 0
+
+
+    # ===== Rank System =====
+
+    if hit_rate >= 90:
+        rank = "S"
+        rank_color = YELLOW
+
+    elif hit_rate >= 75:
+        rank = "A"
+        rank_color = GREEN
+
+    elif hit_rate >= 60:
+        rank = "B"
+        rank_color = WHITE
+
+    else:
+        rank = "C"
+        rank_color = RED
+
+
+    # ===== Background Overlay =====
+
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0,0,0,200))
-    screen.blit(overlay, (0,0))
-    draw_text("NEXT LEVEL", large_font, YELLOW, WIDTH//2, HEIGHT//2 - 50, center=True)
-    draw_text(f"You reached Level {level} !", font, WHITE, WIDTH//2, HEIGHT//2 + 20, center=True)
-    draw_text("Press ENTER to continue", small_font, GREEN, WIDTH//2, HEIGHT//2 + 100, center=True)
+
+    overlay.fill((0, 0, 0, 220))
+
+    screen.blit(overlay, (0, 0))
+
+
+    # ===== Main Result Box =====
+
+    pygame.draw.rect(
+        screen,
+        (40, 40, 40),
+        (170, 70, 460, 460),
+        border_radius=15
+    )
+
+    pygame.draw.rect(
+        screen,
+        WHITE,
+        (170, 70, 460, 460),
+        3,
+        border_radius=15
+    )
+
+
+    # ===== Title =====
+
+    draw_text(
+        "GAME OVER",
+        large_font,
+        RED,
+        WIDTH//2,
+        120,
+        center=True
+    )
+
+
+    # ===== Rank =====
+
+    draw_text(
+        f"RANK {rank}",
+        large_font,
+        rank_color,
+        WIDTH//2,
+        190,
+        center=True
+    )
+
+
+    # ===== Statistics =====
+
+    stats = [
+
+        f"Final Score : {int(score)}",
+
+        f"Level Reached : {level}",
+
+        f"Enemies Killed : {total_kills}",
+
+        f"Shots Fired : {total_shots}",
+
+        f"Shots Hit : {total_hits}",
+
+        f"Accuracy : {hit_rate:.1f}%"
+    ]
+
+
+    # 显示统计资料
+    for i, stat in enumerate(stats):
+
+        draw_text(
+            stat,
+            small_font,
+            WHITE,
+            WIDTH//2,
+            260 + i * 40,
+            center=True
+        )
+
+
+    # ===== Restart =====
+
+    draw_text(
+        "Press R To Restart",
+        small_font,
+        GREEN,
+        WIDTH//2,
+        485,
+        center=True
+    )
+
+
+    # ===== Quit =====
+
+    draw_text(
+        "Press ESC To Quit",
+        small_font,
+        GRAY,
+        WIDTH//2,
+        505,
+        center=True
+    )
+#-----------update level transition--------------------
+def show_level_transition():
+
+    # ===== Dark Overlay =====
+
+    # create a dark grey layer
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+    # black + 220 tranparency
+    overlay.fill((0, 0, 0, 220))
+
+    # draw on screen
+    screen.blit(overlay, (0, 0))
+
+
+    # ===== Main Box =====
+
+    # box bg
+    pygame.draw.rect(
+        screen,
+        (40, 40, 40),
+        (180, 120, 440, 320),
+        border_radius=15
+    )
+
+    # white border
+    pygame.draw.rect(
+        screen,
+        WHITE,
+        (180, 120, 440, 320),
+        3,
+        border_radius=15
+    )
+
+
+    # ===== Title =====
+
+    draw_text(
+        "LEVEL CLEARED",
+        large_font,
+        YELLOW,
+        WIDTH//2,
+        170,
+        center=True
+    )
+
+
+    # ===== Current Level =====
+
+    draw_text(
+        f"Welcome To Level {level + 1}",
+        font,
+        WHITE,
+        WIDTH//2,
+        230,
+        center=True
+    )
+
+
+    # ===== Difficulty Changes =====
+
+    draw_text(
+        "Difficulty Increased",
+        small_font,
+        RED,
+        WIDTH//2,
+        290,
+        center=True
+    )
+
+    draw_text(
+        f"+ Enemy Speed",
+        small_font,
+        WHITE,
+        WIDTH//2,
+        330,
+        center=True
+    )
+
+    draw_text(
+        f"+ Enemy Health",
+        small_font,
+        WHITE,
+        WIDTH//2,
+        360,
+        center=True
+    )
+
+    draw_text(
+        f"+ Enemy Bullet Speed",
+        small_font,
+        WHITE,
+        WIDTH//2,
+        390,
+        center=True
+    )
+
+
+    # ===== Continue =====
+
+    draw_text(
+        "Press ENTER To Continue",
+        small_font,
+        GREEN,
+        WIDTH//2,
+        470,
+        center=True
+    )
 
 # ==================== INIT ====================
 reset_game()
@@ -478,13 +689,77 @@ while True:
             elif game_state == "START" and event.key == pygame.K_RETURN:
                 reset_game()
 
-    # -------------------- update --------------------
+    # -------------------- update --------------------week11
     # Member 3: main menu
     if game_state == "START":
-        draw_text("STILL——WORLD", font, WHITE, 250, 220)
-        pygame.draw.rect(screen, GRAY, start_btn_rect)
-        draw_text("Start Game", small_font, WHITE, start_btn_rect.x+45, start_btn_rect.y+15)
-        draw_text("Click or Press Enter", small_font, WHITE, WIDTH//2, 420, center=True)
+
+        # ===== Dark Overlay =====
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        screen.blit(overlay, (0, 0))
+
+        # ===== Title =====
+        draw_text("STILL WORLD", large_font, WHITE, WIDTH//2, 160, center=True)
+        #width//2=screen center
+        draw_text(
+            "Time Moves When You Move",
+            small_font,
+            YELLOW,
+            WIDTH//2,
+            210,
+            center=True
+        )
+
+        # ===== Hover Button =====
+        mouse_pos = pygame.mouse.get_pos() #find wheres the mouse
+
+        if start_btn_rect.collidepoint(mouse_pos): #check if cursor is on the rect
+            button_color = (180, 180, 180) #cursor on the rect,rect will shiner
+            border_color = WHITE
+        else:
+            button_color = (100, 100, 100)
+            border_color = GRAY
+        #border_radius=12 to let the corner smooth
+        #3 = border thickness
+        pygame.draw.rect(screen, button_color, start_btn_rect, border_radius=12)
+        pygame.draw.rect(screen, border_color, start_btn_rect, 3, border_radius=12)
+        #----------------button text---------------
+        draw_text(
+            "START GAME",
+            small_font,
+            BLACK,
+            start_btn_rect.centerx,
+            start_btn_rect.centery - 10,
+            center=True
+        )
+
+        # ===== Instructions =====
+        draw_text(
+            "Click Button or Press ENTER",
+            small_font,
+            WHITE,
+            WIDTH//2,
+            420,
+            center=True
+        )
+
+        draw_text(
+            "WASD = Move",
+            small_font,
+            GREEN,
+            WIDTH//2,
+            470,
+            center=True
+        )
+
+        draw_text(
+            "Mouse Click / F = Shoot",
+            small_font,
+            GREEN,
+            WIDTH//2,
+            500,
+            center=True
+        )
 
     # Member 1+2+3: game main loop游戏主循环
     elif game_state == "PLAYING":
