@@ -5,7 +5,7 @@
 #   - Bullet system integration (player's bullet)
 #
 # Member 2 - DANG YEE TING:
-#   - Enemy AI behavior (敌人追踪玩家、射击)
+#   - Enemy AI behavior (敌人追踪玩家、射击)(添加enemy2，100八仙血包)
 #   - Level logic design & flow (等级提升、敌人生成、难度递增)
 #   - Game Difficulty Balancing (调整敌人难度)
 #
