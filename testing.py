@@ -1,3 +1,4 @@
+
 # STILL-WORLD (testing)
 # Member 1 - DANISH:
 #   - Player movement system (WASD)
@@ -39,40 +40,32 @@ GRAY = (120, 120, 120)
 YELLOW = (255, 255, 100)
 
 # ==================== GAME VARIABLES ====================
-# Member 3:
 game_state = "START"
-# Member 2 & 3: 等级、分数
 level = 1
 score = 0
 score_multiplier = 1
 next_level_ready = False
 
-# Member 2:balancing dificulty难度平衡）
-# 设一开始难度
 enemy_base_speed = 2.0
 enemy_shoot_delay = 90
 enemy_health_base = 100
 enemy_bullet_speed = 7.0
-# 设最大难度
+
 MAX_ENEMY_SPEED = 8.0
 MIN_SHOOT_DELAY = 25
 MAX_ENEMY_HEALTH = 200
 MAX_ENEMY_BULLET_SPEED = 12.0
 
-# Member 2: 当前难度值（跟着等级变化）
-# 当游戏过关的时候 只有这四个variable会被修改
 current_enemy_speed = enemy_base_speed
 current_shoot_delay = enemy_shoot_delay
 current_enemy_health = enemy_health_base
 current_enemy_bullet_speed = enemy_bullet_speed
 
-# Member 3:data for result screen
 total_shots = 0
 total_hits = 0
 total_kills = 0
 
 # ==================== FONTS ====================
-# Member 3: UI font
 font = pygame.font.Font(None, 42)
 small_font = pygame.font.Font(None, 28)
 large_font = pygame.font.Font(None, 64)
@@ -89,10 +82,7 @@ health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
-# Member 3: start button area
 start_btn_rect = pygame.Rect(300, 320, 200, 50)
-
-# Member 3: draw text
 
 
 def draw_text(text, font, text_col, x, y, center=False):
@@ -104,7 +94,6 @@ def draw_text(text, font, text_col, x, y, center=False):
         screen.blit(img, (x, y))
 
 # ==================== PLAYER CLASS ====================
-# Member 1: player movement and shooting
 
 
 class Player(pygame.sprite.Sprite):
@@ -140,7 +129,6 @@ class Player(pygame.sprite.Sprite):
         self.update_animation()
         self.check_alive()
 
-    # Member 1: (WASD)
     def move(self, keys):
         if keys[pygame.K_a]:
             self.rect.x -= self.speed
@@ -164,7 +152,6 @@ class Player(pygame.sprite.Sprite):
                   or keys[pygame.K_w] or keys[pygame.K_s])
         self.update_action(1 if moving else 0)
 
-    # Member 1: shooting
     def shoot(self):
         global total_shots
         total_shots += 1
@@ -197,8 +184,7 @@ class Player(pygame.sprite.Sprite):
         screen.blit(pygame.transform.flip(
             self.image, self.flip, False), self.rect)
 
-# ==================== ENEMY CLASS ====================
-# Member 2: enemy ai behavior敌人AI行为、动画、难度参数
+# ==================== ENEMY CLASS (ENEMY 1) ====================
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -240,7 +226,6 @@ class Enemy(pygame.sprite.Sprite):
         dy = player.rect.centery - self.rect.centery
         distance = math.hypot(dx, dy)
         if distance > 0:
-
             self.rect.x += (dx / distance) * current_enemy_speed * time_scale
             self.rect.y += (dy / distance) * current_enemy_speed * time_scale
         self.flip = dx < 0
@@ -249,8 +234,8 @@ class Enemy(pygame.sprite.Sprite):
         self.shoot_timer += 1 * time_scale
         if self.shoot_timer >= current_shoot_delay and distance > 0:
             self.shoot_timer = 0
-            bullet = EnemyBullet(self.rect.centerx, self.rect.centery,
-                                 dx/distance, dy/distance)
+            bullet = EnemyBullet(
+                self.rect.centerx, self.rect.centery, dx/distance, dy/distance)
             enemy_bullet_group.add(bullet)
 
     def update_animation(self):
@@ -276,7 +261,7 @@ class Enemy(pygame.sprite.Sprite):
             self.update_action(2)
             score += 25
             total_kills += 1
-            # 随机掉落血包
+            # Enemy1 随机 1/3 概率掉落血包
             if random.randint(1, 3) == 1:
                 item_box_group.add(
                     ItemBox('Health', self.rect.centerx, self.rect.centery))
@@ -285,10 +270,94 @@ class Enemy(pygame.sprite.Sprite):
         screen.blit(pygame.transform.flip(
             self.image, self.flip, False), self.rect)
 
+
+# ==================== ENEMY 2 CLASS (100% Drop Health) ====================
+# 新增 Enemy2
+class Enemy2(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        self.alive = True
+        self.health = current_enemy_health  # 血量和enemy1一样
+        self.direction = 1
+        self.flip = False
+
+        self.animation_list = []
+        self.frame_index = 0
+        self.action = 0
+        self.update_time = pygame.time.get_ticks()
+        self.shoot_timer = random.randint(0, current_shoot_delay)
+
+        # 读取 enemy2 的图片
+        for animation in ['Idle', 'Run', 'Death']:
+            temp_list = []
+            frames = [f for f in os.listdir(
+                f'img/enemy2/{animation}') if f.endswith('.png')]
+            num_of_frames = len(frames)
+            for i in range(num_of_frames):
+                img = pygame.image.load(
+                    f'img/enemy2/{animation}/{i}.png').convert_alpha()
+                img = pygame.transform.scale(img, (80, 80))
+                temp_list.append(img)
+            self.animation_list.append(temp_list)
+        self.image = self.animation_list[self.action][self.frame_index]
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+
+    def update(self, time_scale):
+        self.update_animation()
+        self.check_alive()
+        if not self.alive:
+            return
+
+        dx = player.rect.centerx - self.rect.centerx
+        dy = player.rect.centery - self.rect.centery
+        distance = math.hypot(dx, dy)
+        if distance > 0:
+            self.rect.x += (dx / distance) * current_enemy_speed * time_scale
+            self.rect.y += (dy / distance) * current_enemy_speed * time_scale
+        self.flip = dx < 0
+        self.update_action(1)
+
+        self.shoot_timer += 1 * time_scale
+        if self.shoot_timer >= current_shoot_delay and distance > 0:
+            self.shoot_timer = 0
+            bullet = EnemyBullet(
+                self.rect.centerx, self.rect.centery, dx/distance, dy/distance)
+            enemy_bullet_group.add(bullet)
+
+    def update_animation(self):
+        ANIMATION_COOLDOWN = 100
+        self.image = self.animation_list[self.action][self.frame_index]
+        if pygame.time.get_ticks() - self.update_time > ANIMATION_COOLDOWN:
+            self.update_time = pygame.time.get_ticks()
+            self.frame_index += 1
+        if self.frame_index >= len(self.animation_list[self.action]):
+            self.frame_index = 0 if self.action != 2 else len(
+                self.animation_list[self.action]) - 1
+
+    def update_action(self, new_action):
+        if new_action != self.action:
+            self.action = new_action
+            self.frame_index = 0
+            self.update_time = pygame.time.get_ticks()
+
+    def check_alive(self):
+        global score, total_kills
+        if self.health <= 0 and self.alive:
+            self.alive = False
+            self.update_action(2)
+            score += 40  # 死后给多点分数
+            total_kills += 1
+            # Enemy2 死亡 100% 掉血包
+            item_box_group.add(
+                ItemBox('Health', self.rect.centerx, self.rect.centery))
+
+    def draw(self):
+        screen.blit(pygame.transform.flip(
+            self.image, self.flip, False), self.rect)
+
+
 # ==================== BULLET CLASSES ====================
-# Member 1: player bullet
-
-
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__()
@@ -309,13 +378,11 @@ class Bullet(pygame.sprite.Sprite):
                 self.kill()
                 break
 
-# Member 2: 敌人子弹系统enemy bullet
-
 
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy):
         super().__init__()
-        self.speed = current_enemy_bullet_speed   # 难度影响子弹速度
+        self.speed = current_enemy_bullet_speed
         self.dx = dx
         self.dy = dy
         self.image = enemy_bullet_img
@@ -327,10 +394,10 @@ class EnemyBullet(pygame.sprite.Sprite):
         if not self.rect.colliderect((0, 0, WIDTH, HEIGHT)):
             self.kill()
         if self.rect.colliderect(player) and player.alive:
-            player.health -= 15          # 子弹伤害
+            player.health -= 15
             self.kill()
 
-# Member 3: colectable item (health)
+# ==================== ITEM BOX ====================
 
 
 class ItemBox(pygame.sprite.Sprite):
@@ -347,7 +414,6 @@ class ItemBox(pygame.sprite.Sprite):
             self.kill()
 
 # ==================== HEALTH BAR ====================
-# Member 3: UI 血条
 
 
 class HealthBar:
@@ -361,16 +427,14 @@ class HealthBar:
         pygame.draw.rect(screen, RED, (self.x, self.y, 150, 20))
         pygame.draw.rect(screen, GREEN, (self.x, self.y, 150 * ratio, 20))
 
+
 # ==================== GROUPS ====================
-
-
 bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
 
 # ==================== LEVEL & DIFFICULTY ====================
-# Member 2: enemy ai敌人生成、level关卡控制、难度平衡difficulty balancing
 
 
 def create_enemy():
@@ -383,7 +447,12 @@ def create_enemy():
         x, y = -50, random.randint(0, HEIGHT)
     else:
         x, y = WIDTH + 50, random.randint(0, HEIGHT)
-    enemy_group.add(Enemy(x, y))
+
+    #  (Enemy2 added)：生成敌人时有 30% 几率生成Enemy2，70% 是普通 Enemy
+    if random.random() < 0.3:
+        enemy_group.add(Enemy2(x, y))
+    else:
+        enemy_group.add(Enemy(x, y))
 
 
 def start_level(current_level):
@@ -393,7 +462,6 @@ def start_level(current_level):
 
 
 def next_level():
-    """难度平衡：每级增加敌人速度、减少射击延迟、增加生命值和子弹速度"""
     global level, score_multiplier
     global current_enemy_speed, current_shoot_delay, current_enemy_health, current_enemy_bullet_speed
     level += 1
@@ -432,7 +500,6 @@ def reset_game():
     game_state = "PLAYING"
 
 # ==================== UI SCREENS ====================
-# Member 3: result screen and next level screen
 
 
 def show_result_screen():
@@ -472,7 +539,7 @@ def show_level_transition():
 
 # ==================== INIT ====================
 reset_game()
-game_state = "START"   # start from main menu
+game_state = "START"
 
 # ==================== MAIN LOOP ====================
 while True:
@@ -485,26 +552,24 @@ while True:
             pygame.quit()
             sys.exit()
 
-        # mouse click：start button / shooting in while playing
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if game_state == "START":
                 if start_btn_rect.collidepoint(event.pos):
                     reset_game()
             elif game_state == "PLAYING":
                 if player.alive:
-                    player.shoot()          # Member 1 shooting
+                    player.shoot()
 
-        # keyboard
         if event.type == pygame.KEYDOWN:
             if game_state == "PLAYING" and event.key == pygame.K_f:
-                player.shoot()              # Member 1 shoot by press keyboard
+                player.shoot()
             elif game_state == "LEVEL_TRANSITION" and event.key == pygame.K_RETURN:
-                next_level()                # Member 2 press enter to next level
+                next_level()
                 game_state = "PLAYING"
                 next_level_ready = False
             elif game_state == "RESULT":
                 if event.key == pygame.K_r:
-                    reset_game()            # Member 3 restart game
+                    reset_game()
                 elif event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
@@ -512,7 +577,6 @@ while True:
                 reset_game()
 
     # -------------------- update --------------------
-    # Member 3: main menu
     if game_state == "START":
         draw_text("SUPERHOT", font, WHITE, 250, 220)
         pygame.draw.rect(screen, GRAY, start_btn_rect)
@@ -521,39 +585,44 @@ while True:
         draw_text("Click or Press Enter", small_font,
                   WHITE, WIDTH//2, 420, center=True)
 
-    # Member 1+2+3: game main loop游戏主循环
     elif game_state == "PLAYING":
         keys = pygame.key.get_pressed()
         time_scale = 1.0 if any(keys[k] for k in (
             pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d)) else 0.08
 
-        # 等级过渡检测 (Member 2 & 3)
         if not next_level_ready and score >= level * 100:
             game_state = "LEVEL_TRANSITION"
             next_level_ready = True
             continue
 
-        # Member 1: player movement、update、draw
         if player.alive:
             player.move(keys)
             player.update()
             player.draw()
             health_bar.draw(player.health)
 
-        # Member 2: 敌人更新
         for enemy in enemy_group:
             enemy.update(time_scale)
             enemy.draw()
 
-        # Member 2: 玩家与敌人碰撞（动到enemy会受伤）
+        # 修改 (Enemy2 逻辑)：玩家直接和敌人撞击时也做了适应，区分掉落概率
         for enemy in list(enemy_group):
             if pygame.sprite.collide_rect(player, enemy) and enemy.alive and player.alive:
                 player.health -= 25
-                score += 25
                 total_kills += 1
-                if random.randint(1, 3) == 1:
+
+                # 判断撞到的是 Enemy 还是 Enemy2 并加分/掉落血包
+                if isinstance(enemy, Enemy2):
+                    score += 40
                     item_box_group.add(
+                        # 100% 掉落
                         ItemBox('Health', enemy.rect.centerx, enemy.rect.centery))
+                else:
+                    score += 25
+                    if random.randint(1, 3) == 1:  # 1/3 概率掉落
+                        item_box_group.add(
+                            ItemBox('Health', enemy.rect.centerx, enemy.rect.centery))
+
                 enemy.kill()
                 if player.health <= 0:
                     player.alive = False
@@ -561,7 +630,6 @@ while True:
                     game_state = "RESULT"
                 break
 
-        # Member 1+2+3: bullet and item update
         bullet_group.update()
         bullet_group.draw(screen)
         enemy_bullet_group.update(time_scale)
@@ -569,22 +637,18 @@ while True:
         item_box_group.update()
         item_box_group.draw(screen)
 
-        # Member 3: score multiplier
         score += 0.1 * time_scale * score_multiplier
 
         if not player.alive:
             game_state = "RESULT"
 
-        # Member 3: UI show
         draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
         draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
         draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
         draw_text(f"Shots: {total_shots}  Hits: {total_hits}",
                   small_font, WHITE, 10, 130)
 
-    # Member 3: next level screen
     elif game_state == "LEVEL_TRANSITION":
-        # stay，show "press enter"
         if player.alive:
             player.update()
             player.draw()
@@ -602,7 +666,6 @@ while True:
                   small_font, WHITE, 10, 130)
         show_level_transition()
 
-    # Member 3:game end and go to result screen
     elif game_state == "RESULT":
         show_result_screen()
 
