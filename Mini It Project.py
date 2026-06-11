@@ -86,6 +86,10 @@ health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
+# NEW: wall image
+wall_img = pygame.image.load('img/wall.png').convert_alpha()
+wall_img = pygame.transform.scale(wall_img, (100, 100))
+
 # Member 3: start button area
 start_btn_rect = pygame.Rect(300, 320, 200, 50) #rect place and size
 
@@ -325,6 +329,17 @@ class ItemBox(pygame.sprite.Sprite):
                 player.health = min(player.max_health, player.health + 25)
             self.kill() #gone after collected 
 
+
+# ==================== WALL CLASS ====================
+class Wall(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = wall_img
+        self.rect = self.image.get_rect(center=(x, y))
+
+    def update(self):
+        pass
+
 # ==================== HEALTH BAR ====================
 # Member 3: UI 血条
 class HealthBar:
@@ -345,6 +360,12 @@ bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
+
+
+# NEW: wall group
+wall_group = pygame.sprite.Group()
+wall_group.add(Wall(200, 300))   # first wall
+wall_group.add(Wall(600, 300))   # second wall
 
 # ==================== LEVEL & DIFFICULTY ====================
 # Member 2: enemy ai敌人生成、level关卡控制、难度平衡difficulty balancing
@@ -478,38 +499,42 @@ while True:
             elif game_state == "START" and event.key == pygame.K_RETURN:
                 reset_game()
 
+    
     # -------------------- update --------------------
-    # Member 3: main menu
     if game_state == "START":
         draw_text("STILL——WORLD", font, WHITE, 250, 220)
         pygame.draw.rect(screen, GRAY, start_btn_rect)
         draw_text("Start Game", small_font, WHITE, start_btn_rect.x+45, start_btn_rect.y+15)
         draw_text("Click or Press Enter", small_font, WHITE, WIDTH//2, 420, center=True)
 
-    # Member 1+2+3: game main loop游戏主循环
     elif game_state == "PLAYING":
         keys = pygame.key.get_pressed()
         time_scale = 1.0 if any(keys[k] for k in (pygame.K_w,pygame.K_s,pygame.K_a,pygame.K_d)) else 0.08
 
-        # 等级过渡检测 (Member 2 & 3)
         if not next_level_ready and score >= level * 100:
             game_state = "LEVEL_TRANSITION"
             next_level_ready = True
             continue
 
-        # Member 1: player movement、update、draw
         if player.alive:
             player.move(keys)
             player.update()
             player.draw()
             health_bar.draw(player.health)
 
-        # Member 2: 敌人更新
         for enemy in enemy_group:
             enemy.update(time_scale)
             enemy.draw()
 
-        # Member 2: 玩家与敌人碰撞（动到enemy会受伤）
+        # Player collision with walls
+        if pygame.sprite.spritecollide(player, wall_group, False):
+            player.rect.x -= player.direction * player.speed
+
+        # Enemy collision with walls
+        for enemy in enemy_group:
+            if pygame.sprite.spritecollide(enemy, wall_group, False):
+                enemy.rect.x -= (enemy.direction * current_enemy_speed)
+
         for enemy in list(enemy_group):
             if pygame.sprite.collide_rect(player, enemy) and enemy.alive and player.alive:
                 player.health -= 25
@@ -524,7 +549,6 @@ while True:
                     game_state = "RESULT"
                 break
 
-        # Member 1+2+3: bullet and item update
         bullet_group.update()
         bullet_group.draw(screen)
         enemy_bullet_group.update(time_scale)
@@ -532,21 +556,30 @@ while True:
         item_box_group.update()
         item_box_group.draw(screen)
 
-        # Member 3: score multiplier
+        # Player bullets vs walls
+        for bullet in list(bullet_group):
+            if pygame.sprite.spritecollide(bullet, wall_group, False):
+                bullet.kill()
+
+        # Enemy bullets vs walls
+        for e_bullet in list(enemy_bullet_group):
+            if pygame.sprite.spritecollide(e_bullet, wall_group, False):
+                e_bullet.kill()
+
+        # Draw walls
+        wall_group.draw(screen)
+
         score += 0.1 * time_scale * score_multiplier
 
         if not player.alive:
             game_state = "RESULT"
 
-        # Member 3: UI show
         draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
         draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
         draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
         draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
 
-    # Member 3: next level screen
     elif game_state == "LEVEL_TRANSITION":
-        # stay，show "press enter"
         if player.alive:
             player.update()
             player.draw()
@@ -557,13 +590,13 @@ while True:
         bullet_group.draw(screen)
         enemy_bullet_group.draw(screen)
         item_box_group.draw(screen)
+        wall_group.draw(screen)
         draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
         draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
         draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
         draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
         show_level_transition()
 
-    # Member 3:game end and go to result screen
     elif game_state == "RESULT":
         show_result_screen()
 
