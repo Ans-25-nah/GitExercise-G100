@@ -86,6 +86,23 @@ health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
+# ==================== LOAD SOUNDS ====================
+pygame.mixer.init()
+
+def load_sound(name):
+    try:
+        return pygame.mixer.Sound(os.path.join('sfx', name))
+    except:
+        print(f"Warning: Sound '{name}' not found.")
+        return None
+
+shoot_sound = load_sound('shoot.wav')
+pickup_sound = load_sound('pickup.wav')
+
+# ==================== LOAD MUSIC & GAMEOVER SOUND ==================== week 12
+gameover_sound = load_sound('gameover.wav')   
+bgm_path = os.path.join('sfx', 'bgm_playing.wav')  # bgm file at
+
 # Member 3: start button area
 start_btn_rect = pygame.Rect(300, 320, 200, 50) #rect place and size
 
@@ -159,6 +176,7 @@ class Player(pygame.sprite.Sprite):
     def shoot(self):
         global total_shots
         total_shots += 1
+        if shoot_sound: shoot_sound.play() #new
         bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
         bullet_group.add(bullet)
 
@@ -323,6 +341,7 @@ class ItemBox(pygame.sprite.Sprite):
             if self.item_type == 'Health':
                 #add 25 health,not over max health
                 player.health = min(player.max_health, player.health + 25)
+                if pickup_sound: pickup_sound.play() #new
             self.kill() #gone after collected 
 
 # ==================== HEALTH BAR ====================
@@ -404,6 +423,15 @@ def reset_game():
     current_enemy_health = enemy_health_base
     current_enemy_bullet_speed = enemy_bullet_speed
     start_level(level)
+
+    # 开始播放背景音乐（循环）
+    try:
+        pygame.mixer.music.load(bgm_path)
+        pygame.mixer.music.set_volume(1.0)
+        pygame.mixer.music.play(-1)   # -1 表示无限循环
+    except:
+        print("Warning: Background music not found or unsupported format.")
+
     game_state = "PLAYING"
 
 # ==================== UI SCREENS ====================
@@ -542,7 +570,6 @@ def show_result_screen():
 #-----------update level transition--------------------
 def show_level_transition():
 
-    # ===== Dark Overlay =====
 
     # create a dark grey layer
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -719,7 +746,7 @@ while True:
         else:
             button_color = (100, 100, 100)
             border_color = GRAY
-        #border_radius=12 to let the corner smooth
+        #border_radius=12 to let the corner rounded
         #3 = border thickness
         pygame.draw.rect(screen, button_color, start_btn_rect, border_radius=12)
         pygame.draw.rect(screen, border_color, start_btn_rect, 3, border_radius=12)
@@ -811,6 +838,11 @@ while True:
         score += 0.1 * time_scale * score_multiplier
 
         if not player.alive:
+             # stop music and（fade out 0.5 second）
+            pygame.mixer.music.fadeout(500)
+        # play game over sound effect
+            if gameover_sound:
+                gameover_sound.play() #new
             game_state = "RESULT"
 
         # Member 3: UI show
