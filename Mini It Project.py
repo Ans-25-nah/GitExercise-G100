@@ -86,6 +86,7 @@ health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
+
 # NEW: wall image
 wall_img = pygame.image.load('img/wall.png').convert_alpha()
 wall_img = pygame.transform.scale(wall_img, (100, 100))
@@ -361,7 +362,6 @@ enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
 
-
 # NEW: wall group
 wall_group = pygame.sprite.Group()
 wall_group.add(Wall(200, 300))   # first wall
@@ -499,7 +499,6 @@ while True:
             elif game_state == "START" and event.key == pygame.K_RETURN:
                 reset_game()
 
-    
     # -------------------- update --------------------
     if game_state == "START":
         draw_text("STILL——WORLD", font, WHITE, 250, 220)
