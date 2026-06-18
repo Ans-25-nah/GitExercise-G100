@@ -188,143 +188,233 @@ class Player(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
+    # 构造函数：在创建敌人对象时自动调用（__init__），传入出生坐标 (x, y)
     def __init__(self, x, y):
+        # 初始化 sprite工文件夹里的sprite工具里面的功能
         pygame.sprite.Sprite.__init__(self)
-        self.alive = True
-        self.health = current_enemy_health
-        self.direction = 1
-        self.flip = False
+        self.alive = True  # 标记敌人是否存活，刚出生时为 True
+        self.health = current_enemy_health  # 设置敌人的当前血量，初始值为当前关卡的敌人基础血量
+        self.direction = 1  # 设置移动方向，1 表示向右，-1 表示向左
+        self.flip = False  # 图片水平翻转标志：False 表示不翻转，True 表示向左转时翻转图片
 
-        self.animation_list = []
-        self.frame_index = 0
-        self.action = 0
-        self.update_time = pygame.time.get_ticks()
-        self.shoot_timer = random.randint(0, current_shoot_delay)
+        self.animation_list = []  # 创建一个空列表 用来储存所有的动画图片（Idle  Run  Death 三个动作）
+        self.frame_index = 0  # 从第 0 帧开始播放
+        self.action = 0  # 初始化当前动作：0：Idle，1：Run，2：Death
+        # pygame自带的计时器
+        self.update_time = pygame.time.get_ticks()  # 记录上一次更新动画帧的时间戳（单位：毫秒）
+        self.shoot_timer = random.randint(
+            0, current_shoot_delay)  # 随机初始化射击计时器，避免所有敌人同时开枪
 
+        # 循环遍历三种动画文件夹
         for animation in ['Idle', 'Run', 'Death']:
-            temp_list = []
-            frames = [f for f in os.listdir(
+            temp_list = []  # 创建一个临时列表，用于存放当前这个动作的所有图片帧
+            frames = [f for f in os.listdir(  # 扫描对应的文件夹，找出所有以 .png 结尾的文件名，存进列表中
                 f'img/enemy1/{animation}') if f.endswith('.png')]
-            num_of_frames = len(frames)
-            for i in range(num_of_frames):
-                img = pygame.image.load(
+            num_of_frames = len(frames)  # 计算这个动作一共有多少帧图片
+            for i in range(num_of_frames):  # 根据帧数循环，依次读取图片
+                img = pygame.image.load(  # 读取单个图片文件，并转换成带有透明通道的 Surface 对象
                     f'img/enemy1/{animation}/{i}.png').convert_alpha()
-                img = pygame.transform.scale(img, (80, 80))
-                temp_list.append(img)
+                img = pygame.transform.scale(
+                    img, (80, 80))  # 将图片缩放到 80x80 像素的大小
+                temp_list.append(img)  # 将缩放后的图片添加进临时列表
+            # 把当前动作的所有图片列表，添加到大动画列表中（形成二维列表）
             self.animation_list.append(temp_list)
+
+        # 根据当前的 action 和 frame_index 设定敌人当前要显示的图片
         self.image = self.animation_list[self.action][self.frame_index]
+        # 获取图片的矩形区域（用于控制位置和碰撞检测）
         self.rect = self.image.get_rect()
+        # 将矩形区域的中心点对齐到传入的出生坐标 (x, y)
         self.rect.center = (x, y)
 
+    # 每一帧更新敌人状态的主函数，传入时间缩放值 time_scale (实现SUPERHOT时间缓慢效果)
     def update(self, time_scale):
+        # 调用更新动画帧的函数
         self.update_animation()
+        # 调用检查健康状态的函数（看死了没）
         self.check_alive()
+        # 如果敌人已经死了，直接结束更新，不执行下面的移动和射击逻辑
         if not self.alive:
             return
 
+        # 计算玩家中心点与敌人中心点在 X 轴上的距离
         dx = player.rect.centerx - self.rect.centerx
+        # 计算玩家中心点与敌人中心点在 Y 轴上的距离
         dy = player.rect.centery - self.rect.centery
+        # 使用直角三角形斜边公式，计算敌人到玩家的绝对直线距离
         distance = math.hypot(dx, dy)
+        # 如果距离大于 0（防止除以 0 导致报错）
         if distance > 0:
+            # 根据 X 轴距离比例，结合移动速度和时间缩放，更新敌人的 X 坐标（往玩家走）
             self.rect.x += (dx / distance) * current_enemy_speed * time_scale
+            # 根据 Y 轴距离比例，结合移动速度和时间缩放，更新敌人的 Y 坐标（往玩家走）
             self.rect.y += (dy / distance) * current_enemy_speed * time_scale
+
+        # 如果 dx < 0 说明玩家在敌人的左边，self.flip 设为 True (图片翻转)
         self.flip = dx < 0
+        # 只要在移动，就把动作切换为 1 (Run 跑步)
         self.update_action(1)
 
+        # 射击计时器累加时间（乘以 time_scale 受到时间变慢系统的控制）
         self.shoot_timer += 1 * time_scale
+        # 如果计时器达到了当前关卡的射击延迟，并且玩家还活着（距离 > 0）
         if self.shoot_timer >= current_shoot_delay and distance > 0:
+            # 重置射击计时器
             self.shoot_timer = 0
+            # 创建一颗敌人子弹，传入敌人中心点，以及子弹飞向玩家的方向向量 (dx/distance, dy/distance)
             bullet = EnemyBullet(
                 self.rect.centerx, self.rect.centery, dx/distance, dy/distance)
+            # 将创建的子弹加入到敌人子弹精灵组中，让它在屏幕上渲染更新
             enemy_bullet_group.add(bullet)
 
+    # 负责处理动画帧切替的函数
     def update_animation(self):
+        # 设定动画帧切换的冷却时间为 100 毫秒（每 0.1 秒换一帧）
         ANIMATION_COOLDOWN = 100
+        # 根据当前的动作索引和图片帧索引，更新 self.image
         self.image = self.animation_list[self.action][self.frame_index]
+        # 如果当前系统时间减去上一次更新的时间，大于设定的冷却时间
         if pygame.time.get_ticks() - self.update_time > ANIMATION_COOLDOWN:
+            # 更新时间戳为当前系统时间
             self.update_time = pygame.time.get_ticks()
+            # 帧索引加 1，播放下一帧图片
             self.frame_index += 1
+        # 如果帧索引超过了当前动作图片的总张数（放完了）
         if self.frame_index >= len(self.animation_list[self.action]):
+            # 如果当前的动作用不是 2 (Death 死亡)，就重置回第 0 帧循环播放；如果是死亡动画，就停在最后一帧
             self.frame_index = 0 if self.action != 2 else len(
                 self.animation_list[self.action]) - 1
 
+    # 负责切换动作状态的函数（比如从 Idle 换到 Run）
     def update_action(self, new_action):
+        # 如果传入的新动作和当前正在运行的动作不一样
         if new_action != self.action:
+            # 把动作修改为新动作
             self.action = new_action
+            # 帧索引归零，从新动画的第一帧开始播放
             self.frame_index = 0
+            # 重置动画更新时间戳
             self.update_time = pygame.time.get_ticks()
 
+    # 负责检查敌人死活的函数
     def check_alive(self):
+        # 引入全局变量：分数、总击杀数
         global score, total_kills
+        # 如果血量小于等于 0，并且当前状态还是活着的（说明是刚刚死掉）
         if self.health <= 0 and self.alive:
+            # 将存活状态设为 False
             self.alive = False
+            # 将动作切换为 2 (Death 死亡动画)
             self.update_action(2)
+            # 游戏分数增加 25 分
             score += 25
+            # 总击杀数加 1
             total_kills += 1
-            # Enemy1 随机 1/3 概率掉落血包
+            # Enemy1 随机 1/3 的概率掉落血包（随机抽 1, 2, 3，如果是 1 就掉落）
             if random.randint(1, 3) == 1:
+                # 创建一个血包，位置在敌人死掉的中心点，并加入到道具精灵组
                 item_box_group.add(
                     ItemBox('Health', self.rect.centerx, self.rect.centery))
 
+    # 负责把敌人绘制到屏幕上的函数
     def draw(self):
+        # 使用 blit 将图片画在屏幕上，pygame.transform.flip 用来控制图片是否需要左右翻转
         screen.blit(pygame.transform.flip(
             self.image, self.flip, False), self.rect)
 
 
 # ==================== ENEMY 2 CLASS (100% Drop Health) ====================
-# 新增 Enemy2
+
+# 新增 Enemy2 类，继承自 pygame 的精灵类（Sprite），专门用来 100% 爆血包
 class Enemy2(pygame.sprite.Sprite):
+    # 构造函数：传入出生坐标 (x, y)
     def __init__(self, x, y):
+        # 初始化父类 pygame.sprite.Sprite
         pygame.sprite.Sprite.__init__(self)
+        # 标记敌人2是否存活
         self.alive = True
-        self.health = current_enemy_health  # 血量和enemy1一样
+        # 设置血量，初始值和普通敌人 1 一样
+        self.health = current_enemy_health
+        # 设置移动方向（1为右，-1为左）
         self.direction = 1
+        # 图片水平翻转标志
         self.flip = False
 
+        # 创建一个空列表，用来储存 Enemy2 的所有动画图片
         self.animation_list = []
+        # 初始化当前播放的动画帧索引
         self.frame_index = 0
+        # 初始化当前动作（0: Idle, 1: Run, 2: Death）
         self.action = 0
+        # 记录上一次更新动画帧的时间戳
         self.update_time = pygame.time.get_ticks()
+        # 随机初始化射击计时器
         self.shoot_timer = random.randint(0, current_shoot_delay)
 
-        # 读取 enemy2 的图片
+        # 循环读取 enemy2 的图片资源
         for animation in ['Idle', 'Run', 'Death']:
+            # 创建一个临时列表存放当前动作的图片
             temp_list = []
+            # 获取 img/enemy2 文件夹下对应动作的所有 .png 图片文件名
             frames = [f for f in os.listdir(
                 f'img/enemy2/{animation}') if f.endswith('.png')]
+            # 计算总帧数
             num_of_frames = len(frames)
+            # 循环读取图片
             for i in range(num_of_frames):
+                # 加载 enemy2 的图片，并转换透明通道
                 img = pygame.image.load(
                     f'img/enemy2/{animation}/{i}.png').convert_alpha()
+                # 缩放到 80x80 大小
                 img = pygame.transform.scale(img, (80, 80))
+                # 放进临时列表
                 temp_list.append(img)
+            # 将该动作的完整图片组，添加进大动画列表中
             self.animation_list.append(temp_list)
+
+        # 设定 Enemy2 当前要显示的图片
         self.image = self.animation_list[self.action][self.frame_index]
+        # 获取图片的矩形区域
         self.rect = self.image.get_rect()
+        # 设置矩形中心坐标为出生点
         self.rect.center = (x, y)
 
+    # 每一帧更新敌人2状态的主函数，传入时间缩放值 time_scale
     def update(self, time_scale):
+        # 更新动画帧
         self.update_animation()
+        # 检查是否死亡
         self.check_alive()
+        # 如果死了，直接退出更新，不再移动和射击
         if not self.alive:
             return
 
+        # 计算与玩家的 X 轴距离差
         dx = player.rect.centerx - self.rect.centerx
+        # 计算与玩家的 Y 轴距离差
         dy = player.rect.centery - self.rect.centery
+        # 计算直线距离
         distance = math.hypot(dx, dy)
+        # 追踪玩家移动逻辑
         if distance > 0:
             self.rect.x += (dx / distance) * current_enemy_speed * time_scale
             self.rect.y += (dy / distance) * current_enemy_speed * time_scale
+
+        # 根据玩家在左还是在右，控制图片是否水平翻转
         self.flip = dx < 0
+        # 处于移动状态，动作设为 1 (Run)
         self.update_action(1)
 
+        # 射击控制逻辑
         self.shoot_timer += 1 * time_scale
         if self.shoot_timer >= current_shoot_delay and distance > 0:
             self.shoot_timer = 0
+            # 创建开火子弹飞向玩家
             bullet = EnemyBullet(
                 self.rect.centerx, self.rect.centery, dx/distance, dy/distance)
             enemy_bullet_group.add(bullet)
 
+    # 动画帧更新函数（和 Enemy1 相同）
     def update_animation(self):
         ANIMATION_COOLDOWN = 100
         self.image = self.animation_list[self.action][self.frame_index]
@@ -335,26 +425,49 @@ class Enemy2(pygame.sprite.Sprite):
             self.frame_index = 0 if self.action != 2 else len(
                 self.animation_list[self.action]) - 1
 
+    # 动作切换函数（和 Enemy1 相同）
     def update_action(self, new_action):
         if new_action != self.action:
             self.action = new_action
             self.frame_index = 0
             self.update_time = pygame.time.get_ticks()
 
+    # 检查敌人2是否死亡以及处理 100% 掉落
     def check_alive(self):
-        global score, total_kills
-        if self.health <= 0 and self.alive:
-            self.alive = False
-            self.update_action(2)
-            score += 40  # 死后给多点分数
-            total_kills += 1
-            # Enemy2 死亡 100% 掉血包
+        global score, total_kills  # 引入全局变量
+        if self.health <= 0 and self.alive:  # 如果血量小于等于0
+            self.alive = False  # 死掉
+            self.update_action(2)  # 播Death
+            score += 40  # 特殊的Enemy2 死后加 40 分
+            total_kills += 1  # 击杀数加 1
+            # 100% 在死掉的位置生成一个健康血包
             item_box_group.add(
                 ItemBox('Health', self.rect.centerx, self.rect.centery))
 
+    # 绘制敌人2的函数
     def draw(self):
+        # 将图片画在屏幕上，处理是否左右翻转
         screen.blit(pygame.transform.flip(
             self.image, self.flip, False), self.rect)
+
+# ===================hit text================new added
+
+
+class FloatingText(pygame.sprite.Sprite):
+    def __init__(self, x, y, text="Hit", color=(255, 255, 100)):  # 当子弹打中敌人、要创建这个文字时，传入文字生成的坐标
+        super().__init__()
+        # 使用你现有的 small_font 渲染文本
+        self.image = small_font.render(text, True, color)  # 把文本字符串真正的“画”成一张图片
+        # 获取这张字体的图片矩形大小，并把它的中心点对齐到敌人头上
+        self.rect = self.image.get_rect(center=(x, y))
+        self.counter = 0  # 文字的寿命计时器
+
+    def update(self, time_scale):
+        # 让文字向上飘，乘以 time_scale 可以让它配合变慢机制
+        self.rect.y -= 1.5 * time_scale  # 每一帧更新时，让文字的 Y 坐标减去 1.5（在屏幕上就是往上飘）
+        self.counter += 1 * time_scale
+        if self.counter >= 25:  # 当计时器达到25就会selfkill，防止游戏因为产生太多文字而卡顿。
+            self.kill()
 
 
 # ==================== BULLET CLASSES ====================
@@ -375,6 +488,11 @@ class Bullet(pygame.sprite.Sprite):
             if self.rect.colliderect(enemy.rect) and enemy.alive:
                 enemy.health -= 50
                 total_hits += 1
+                hit_text = FloatingText(  # ----------------
+                    # rectcenterx：获取敌人的中心 X 坐标。，-10:敌人图片上 10 个像素的位置。
+                    enemy.rect.centerx, enemy.rect.top - 10, "Hit")
+                # new added 用 add() 把它扔进篮子里------------------
+                floating_text_group.add(hit_text)
                 self.kill()
                 break
 
@@ -433,6 +551,7 @@ bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
+floating_text_group = pygame.sprite.Group()  # new added------------------
 
 # ==================== LEVEL & DIFFICULTY ====================
 
@@ -448,11 +567,11 @@ def create_enemy():
     else:
         x, y = WIDTH + 50, random.randint(0, HEIGHT)
 
-    #  (Enemy2 added)：生成敌人时有 30% 几率生成Enemy2，70% 是普通 Enemy
-    if random.random() < 0.3:
+    # 每次刷新，随机抽一个敌人时
+    if random.random() < 0.3:  # 有 30% 几率生成Enemy2
         enemy_group.add(Enemy2(x, y))
     else:
-        enemy_group.add(Enemy(x, y))
+        enemy_group.add(Enemy(x, y))  # 70% 是普通 Enemy
 
 
 def start_level(current_level):
@@ -483,6 +602,7 @@ def reset_game():
     bullet_group.empty()
     enemy_bullet_group.empty()
     item_box_group.empty()
+    floating_text_group.empty()  # new added 把屏幕上旧 “Hit” 字全部清空---------------
     player = Player(WIDTH//2, HEIGHT//2, 5, 100)
     health_bar = HealthBar(10, 10, player.health, player.max_health)
     level = 1
@@ -605,21 +725,22 @@ while True:
             enemy.update(time_scale)
             enemy.draw()
 
-        # 修改 (Enemy2 逻辑)：玩家直接和敌人撞击时也做了适应，区分掉落概率
+        # 玩家直接和敌人撞击时，
         for enemy in list(enemy_group):
             if pygame.sprite.collide_rect(player, enemy) and enemy.alive and player.alive:
                 player.health -= 25
                 total_kills += 1
 
                 # 判断撞到的是 Enemy 还是 Enemy2 并加分/掉落血包
-                if isinstance(enemy, Enemy2):
+                if isinstance(enemy, Enemy2):  # insintance（）检查enemy是不是enemy2
                     score += 40
-                    item_box_group.add(
+                    item_box_group.add(  # 把工具箱里面的东西正式生效
                         # 100% 掉落
+                        # 死掉的中心掉血包
                         ItemBox('Health', enemy.rect.centerx, enemy.rect.centery))
-                else:
+                else:  # 如果不是
                     score += 25
-                    if random.randint(1, 3) == 1:  # 1/3 概率掉落
+                    if random.randint(1, 3) == 1:  # 1/3 概率掉落血包
                         item_box_group.add(
                             ItemBox('Health', enemy.rect.centerx, enemy.rect.centery))
 
@@ -636,6 +757,10 @@ while True:
         enemy_bullet_group.draw(screen)
         item_box_group.update()
         item_box_group.draw(screen)
+        # 让篮子里所有的 “Hit” 字体执行上面写好的“往上飘、涨寿命”的逻辑。
+        floating_text_group.update(time_scale)
+        # new added 把所有还没消失的 “Hit” 文字画到屏幕上------------------
+        floating_text_group.draw(screen)
 
         score += 0.1 * time_scale * score_multiplier
 
@@ -659,6 +784,7 @@ while True:
         bullet_group.draw(screen)
         enemy_bullet_group.draw(screen)
         item_box_group.draw(screen)
+
         draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
         draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
         draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
