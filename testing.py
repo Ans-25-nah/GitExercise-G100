@@ -40,6 +40,7 @@ YELLOW = (255, 255, 100)
 
 # ==================== GAME VARIABLES ====================
 # Member 3:
+PAUSE = "PAUSE"
 game_state = "START"
 # Member 2 & 3: 等级、分数
 level = 1
@@ -86,11 +87,11 @@ health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
 item_boxes = {'Health': health_box_img}
 
-# ==================== LOAD SOUNDS ====================
+# ==================== LOAD SOUNDS ==================== 
 pygame.mixer.init()
 
 def load_sound(name):
-    try:
+    try: #avoid crash if cant found the file
         return pygame.mixer.Sound(os.path.join('sfx', name))
     except:
         print(f"Warning: Sound '{name}' not found.")
@@ -102,7 +103,7 @@ pickup_sound = load_sound('pickup.wav')
 # ==================== LOAD MUSIC & GAMEOVER SOUND ==================== week 12
 gameover_sound = load_sound('gameover.wav')   
 bgm_path = os.path.join('sfx', 'bgm_playing.wav')  # bgm file at
-
+#=================
 # Member 3: start button area
 start_btn_rect = pygame.Rect(300, 320, 200, 50) #rect place and size
 
@@ -176,7 +177,7 @@ class Player(pygame.sprite.Sprite):
     def shoot(self):
         global total_shots
         total_shots += 1
-        if shoot_sound: shoot_sound.play() #new
+        if shoot_sound: shoot_sound.play() #new everytime click f will play sound effect
         bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
         bullet_group.add(bullet)
 
@@ -341,7 +342,7 @@ class ItemBox(pygame.sprite.Sprite):
             if self.item_type == 'Health':
                 #add 25 health,not over max health
                 player.health = min(player.max_health, player.health + 25)
-                if pickup_sound: pickup_sound.play() #new
+                if pickup_sound: pickup_sound.play() #new if pickup sound exist then play
             self.kill() #gone after collected 
 
 # ==================== HEALTH BAR ====================
@@ -425,10 +426,10 @@ def reset_game():
     start_level(level)
 
     # 开始播放背景音乐（循环）
-    try:
+    try: #pygame.mixer.music for long music
         pygame.mixer.music.load(bgm_path)
         pygame.mixer.music.set_volume(1.0)
-        pygame.mixer.music.play(-1)   # -1 表示无限循环
+        pygame.mixer.music.play(-1)   # -1 music loop 0:once 1:2
     except:
         print("Warning: Background music not found or unsupported format.")
 
@@ -680,6 +681,7 @@ reset_game()
 game_state = "START"   # start from main menu
 
 # ==================== MAIN LOOP ====================
+pause_snapshot = None #pause
 while True:
     clock.tick(FPS)
     screen.blit(bg_img, (0,0))
@@ -701,6 +703,11 @@ while True:
 
         # keyboard
         if event.type == pygame.KEYDOWN:
+            if game_state == "PLAYING" and event.key == pygame.K_p:
+                pause_snapshot = screen.copy()#pause
+                game_state = "PAUSE"
+            elif game_state == "PAUSE" and event.key == pygame.K_p:
+                game_state = "PLAYING"#pause
             if game_state == "PLAYING" and event.key == pygame.K_f:
                 player.shoot()              # Member 1 shoot by press keyboard
             elif game_state == "LEVEL_TRANSITION" and event.key == pygame.K_RETURN:
@@ -839,10 +846,10 @@ while True:
 
         if not player.alive:
              # stop music and（fade out 0.5 second）
-            pygame.mixer.music.fadeout(500)
+            pygame.mixer.music.fadeout(500) #500ms fade out till 0
         # play game over sound effect
             if gameover_sound:
-                gameover_sound.play() #new
+                gameover_sound.play() #new the moment ppl died will direct play
             game_state = "RESULT"
 
         # Member 3: UI show
@@ -873,5 +880,16 @@ while True:
     # Member 3:game end and go to result screen
     elif game_state == "RESULT":
         show_result_screen()
+
+    elif game_state == "PAUSE":
+    # show pauce screen
+        screen.blit(pause_snapshot, (0, 0))
+    # overlay
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        screen.blit(overlay, (0, 0))
+    # show word
+        draw_text("PAUSED", large_font, YELLOW, WIDTH//2, HEIGHT//2 - 20, center=True)
+        draw_text("Press P to resume", small_font, WHITE, WIDTH//2, HEIGHT//2 + 30, center=True)
 
     pygame.display.update()
