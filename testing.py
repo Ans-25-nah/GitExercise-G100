@@ -129,19 +129,19 @@ class Player(pygame.sprite.Sprite):
         self.update_animation()
         self.check_alive()
 
-    def move(self, keys):
+    def move(self, keys, time_scale=1.0):
         if keys[pygame.K_a]:
-            self.rect.x -= self.speed
+            self.rect.x -= self.speed * time_scale
             self.flip = True
             self.direction = -1
         if keys[pygame.K_d]:
-            self.rect.x += self.speed
+            self.rect.x += self.speed * time_scale
             self.flip = False
             self.direction = 1
         if keys[pygame.K_w]:
-            self.rect.y -= self.speed
+            self.rect.y -= self.speed * time_scale
         if keys[pygame.K_s]:
-            self.rect.y += self.speed
+            self.rect.y += self.speed * time_scale
 
         self.rect.left = max(0, self.rect.left)
         self.rect.right = min(WIDTH, self.rect.right)
@@ -453,20 +453,21 @@ class Enemy2(pygame.sprite.Sprite):
 # ===================hit text================new added
 
 
-class FloatingText(pygame.sprite.Sprite):
-    def __init__(self, x, y, text="Hit", color=(255, 255, 100)):  # 当子弹打中敌人、要创建这个文字时，传入文字生成的坐标
-        super().__init__()
-        # 使用你现有的 small_font 渲染文本
-        self.image = small_font.render(text, True, color)  # 把文本字符串真正的“画”成一张图片
-        # 获取这张字体的图片矩形大小，并把它的中心点对齐到敌人头上
-        self.rect = self.image.get_rect(center=(x, y))
-        self.counter = 0  # 文字的寿命计时器
+class FloatingText(pygame.sprite.Sprite):  # 创造一个会飞的文字的模具
+    # 初始化文字，文字坐标，hit，黄色 语法必须要用self
+    def __init__(self, x, y, text="Hit", color=(255, 255, 100)):  # 当子弹打中敌人 要创建这个文字时  传入文字生成的坐标
+        super().__init__()  # 调用工具箱的语法
+        # 用small_font 渲染（1010变成hit）
+        self.image = small_font.render(text, True, color)  # hit，光滑，黄色
+        # 给hit图片一个长方形，并把它的中心点对齐到敌人头上
+        self.rect = self.image.get_rect(center=(x, y))  # enemy 中间出现
+        self.counter = 0  # 文字的寿命计时器从0开始
 
     def update(self, time_scale):
         # 让文字向上飘，乘以 time_scale 可以让它配合变慢机制
         self.rect.y -= 1.5 * time_scale  # 每一帧更新时，让文字的 Y 坐标减去 1.5（在屏幕上就是往上飘）
-        self.counter += 1 * time_scale
-        if self.counter >= 25:  # 当计时器达到25就会selfkill，防止游戏因为产生太多文字而卡顿。
+        self.counter += 1 * time_scale  # 每一帧更新加一点
+        if self.counter >= 25:  # 如果加到25就会selfkill（开除），防止游戏因为产生太多文字而卡顿。
             self.kill()
 
 
@@ -488,10 +489,10 @@ class Bullet(pygame.sprite.Sprite):
             if self.rect.colliderect(enemy.rect) and enemy.alive:
                 enemy.health -= 50
                 total_hits += 1
-                hit_text = FloatingText(  # ----------------
-                    # rectcenterx：获取敌人的中心 X 坐标。，-10:敌人图片上 10 个像素的位置。
+                hit_text = FloatingText(  # 击败的text是上面设定的那个
+                    # rectcenterx：获取敌人的中心 X 坐标。，enemy头顶往上10:敌人图片上 10 个像素的位置。
                     enemy.rect.centerx, enemy.rect.top - 10, "Hit")
-                # new added 用 add() 把它扔进篮子里------------------
+                # new added 用.add()把hit text link去上面的class才可以有hit 出现 ------------------
                 floating_text_group.add(hit_text)
                 self.kill()
                 break
@@ -716,7 +717,7 @@ while True:
             continue
 
         if player.alive:
-            player.move(keys)
+            player.move(keys, time_scale)
             player.update()
             player.draw()
             health_bar.draw(player.health)
