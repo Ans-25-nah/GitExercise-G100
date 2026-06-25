@@ -279,7 +279,7 @@ class Enemy(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__()
-        self.speed = 10
+        self.speed = 6
         self.image = bullet_img
         self.rect = self.image.get_rect(center=(x, y))
         self.direction = direction
@@ -411,7 +411,7 @@ def reset_game():
     enemy_bullet_group.empty()
     item_box_group.empty()
     #重新create character
-    player = Player(WIDTH//2, HEIGHT//2, 5, 100)
+    player = Player(WIDTH//2, HEIGHT//2, 3, 100)
     health_bar = HealthBar(10, 10, player.health, player.max_health)
     level = 1
     score = 0
