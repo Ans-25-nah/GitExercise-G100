@@ -40,7 +40,7 @@ YELLOW = (255, 255, 100)
 
 # ==================== GAME VARIABLES ====================
 # Member 3:
-PAUSE = "PAUSE"
+
 game_state = "START"
 # Member 2 & 3: 等级、分数
 level = 1
@@ -708,6 +708,13 @@ while True:
                 game_state = "PAUSE"
             elif game_state == "PAUSE" and event.key == pygame.K_p:
                 game_state = "PLAYING"#pause
+            # -----new added can return back by pressing m -----
+            elif game_state == "PAUSE" and event.key == pygame.K_m:
+                reset_game()                
+                pygame.mixer.music.stop()   # stop bg music
+                game_state = "START"        # return back to start
+                pause_snapshot = None       # release ss
+            # ----------------------------------------
             if game_state == "PLAYING" and event.key == pygame.K_f:
                 player.shoot()              # Member 1 shoot by press keyboard
             elif game_state == "LEVEL_TRANSITION" and event.key == pygame.K_RETURN:
@@ -853,10 +860,22 @@ while True:
             game_state = "RESULT"
 
         # Member 3: UI show
-        draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
-        draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
-        draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
-        draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
+# ---- 左上角 Score ----
+        draw_text(f"Score: {int(score)}", font, (0, 0, 139), 10, 40)   # ，dark blue
+
+
+        draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 90)
+        draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 120)
+
+# 右上角 Level
+        level_text = str(level)
+        text_surface = font.render(level_text, True, (0, 0, 139))   #DarkBlue
+        text_rect = text_surface.get_rect()
+        circle_center = (WIDTH - 70, 50)
+        radius = max(text_rect.width, text_rect.height) // 2 + 20
+        pygame.draw.circle(screen, (173, 216, 230), circle_center, radius)   # LightBlue
+        text_rect.center = circle_center
+        screen.blit(text_surface, text_rect)
 
     # Member 3: next level screen
     elif game_state == "LEVEL_TRANSITION":
@@ -871,10 +890,21 @@ while True:
         bullet_group.draw(screen)
         enemy_bullet_group.draw(screen)
         item_box_group.draw(screen)
-        draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
-        draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
-        draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
-        draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
+            # ---- 左上角 Score（大号深蓝） ----
+        draw_text(f"Score: {int(score)}", font, (0, 0, 139), 10, 40)
+
+    # ---- 显示敌人数量（小号白色，可选） ----
+        draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 90)
+
+    # ---- 右上角 Level（圆形背景 + 深蓝数字） ----
+        level_text = str(level)
+        text_surface = font.render(level_text, True, (0, 0, 139))
+        text_rect = text_surface.get_rect()
+        circle_center = (WIDTH - 70, 50)
+        radius = max(text_rect.width, text_rect.height) // 2 + 20
+        pygame.draw.circle(screen, (173, 216, 230), circle_center, radius)
+        text_rect.center = circle_center
+        screen.blit(text_surface, text_rect)
         show_level_transition()
 
     # Member 3:game end and go to result screen
@@ -891,5 +921,7 @@ while True:
     # show word
         draw_text("PAUSED", large_font, YELLOW, WIDTH//2, HEIGHT//2 - 20, center=True)
         draw_text("Press P to resume", small_font, WHITE, WIDTH//2, HEIGHT//2 + 30, center=True)
+        # ----- 新增：按 M 返回主菜单提示 -----
+        draw_text("Press M to Main Menu", small_font, WHITE, WIDTH//2, HEIGHT//2 + 70, center=True)
 
     pygame.display.update()
