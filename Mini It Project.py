@@ -1,18 +1,18 @@
-#STILL-WORLD (testing)
+# ============================================
+# STILL-WORLD 
 # Member 1 - DANISH:
 #   - Player movement system (WASD)
 #   - Shooting mechanism (mouse left click + keyboard F)
 #   - Bullet system integration (player's bullet)
-#
+#   - Collision detection (Walls & Boundaries)
 # Member 2 - DANG YEE TING:
 #   - Enemy AI behavior (敌人追踪玩家、射击)
 #   - Level logic design & flow (等级提升、敌人生成、难度递增)
 #   - Game Difficulty Balancing (调整敌人难度)
-#
 # Member 3 - ANSON:
 #   - Game state management (START, PLAYING, RESULT)
 #   - Score tracking system (Score increasing)
-#   - UI (Start button、health、score and ending screen)
+#   - UI (Start button, health, score and ending screen)
 #   - End game data summary (Result Screen)
 # ============================================
 
@@ -39,75 +39,73 @@ GRAY = (120, 120, 120)
 YELLOW = (255, 255, 100)
 
 # ==================== GAME VARIABLES ====================
-# Member 3:
 game_state = "START"
-# Member 2 & 3: 等级、分数
 level = 1
 score = 0
 score_multiplier = 1
 next_level_ready = False
 
-# Member 2:balancing dificulty难度平衡）
-enemy_base_speed = 2.0 #敌人移动的速度
-enemy_shoot_delay = 90 #射击间隔，越小shoot速度越快
-enemy_health_base = 100 #敌人生命值
-enemy_bullet_speed = 7.0 #敌人子弹的速度
+enemy_base_speed = 2.0
+enemy_shoot_delay = 90
+enemy_health_base = 100
+enemy_bullet_speed = 7.0
 
-MAX_ENEMY_SPEED = 8.0 #敌人速度的limit (避免快到躲不了)
-MIN_SHOOT_DELAY = 25 #shooting的间隔下限 （最快每25秒射一次）
-MAX_ENEMY_HEALTH = 200 #敌人生命的limit
-MAX_ENEMY_BULLET_SPEED = 12.0 #敌人子弹速度的上限
+MAX_ENEMY_SPEED = 8.0
+MIN_SHOOT_DELAY = 25
+MAX_ENEMY_HEALTH = 200
+MAX_ENEMY_BULLET_SPEED = 12.0
 
-# Member 2: 当前难度值（跟着等级变化）
-current_enemy_speed = enemy_base_speed #当前敌人的速度，跟着level加
-current_shoot_delay = enemy_shoot_delay #当前射击延迟
-current_enemy_health = enemy_health_base #当前敌人生命
-current_enemy_bullet_speed = enemy_bullet_speed #当前子弹速度
+current_enemy_speed = enemy_base_speed
+current_shoot_delay = enemy_shoot_delay
+current_enemy_health = enemy_health_base
+current_enemy_bullet_speed = enemy_bullet_speed
 
-# Member 3:data for result screen
 total_shots = 0
 total_hits = 0
 total_kills = 0
 
 # ==================== FONTS ====================
-# Member 3: UI font
-font = pygame.font.Font(None, 42) #normal font ,size 42
-small_font = pygame.font.Font(None, 28) #small font, size 28
-large_font = pygame.font.Font(None, 64) #big font, size 64
+font = pygame.font.Font(None, 42)
+small_font = pygame.font.Font(None, 28)
+large_font = pygame.font.Font(None, 64)
 
 # ==================== LOAD IMAGES ====================
-bg_img = pygame.image.load('img/background1/background.png').convert()
+try:
+    bg_img = pygame.image.load('img/background1/background.png').convert()
+    bullet_img = pygame.image.load('img/icons/bullet.png').convert_alpha()
+    enemy_bullet_img = pygame.image.load('img/icons/enemy_bullet.png').convert_alpha()
+    health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
+    wall_img = pygame.image.load('img/wall.png').convert_alpha()
+except pygame.error:
+    # Fallback placeholders in case image paths differ in your local setup
+    bg_img = pygame.Surface((WIDTH, HEIGHT))
+    bg_img.fill(BLACK)
+    bullet_img = pygame.Surface((20, 20), pygame.SRCALPHA); pygame.draw.circle(bullet_img, YELLOW, (10,10), 8)
+    enemy_bullet_img = pygame.Surface((20, 20), pygame.SRCALPHA); pygame.draw.circle(enemy_bullet_img, RED, (10,10), 8)
+    health_box_img = pygame.Surface((35, 35), pygame.SRCALPHA); pygame.draw.rect(health_box_img, GREEN, (0,0,35,35))
+    wall_img = pygame.Surface((100, 100)); wall_img.fill(GRAY)
+
 bg_img = pygame.transform.scale(bg_img, (WIDTH, HEIGHT))
-bullet_img = pygame.image.load('img/icons/bullet.png').convert_alpha()
 bullet_img = pygame.transform.scale(bullet_img, (20, 20))
-enemy_bullet_img = pygame.image.load('img/icons/enemy_bullet.png').convert_alpha()
 enemy_bullet_img = pygame.transform.scale(enemy_bullet_img, (20, 20))
-health_box_img = pygame.image.load('img/icons/health_box.png').convert_alpha()
 health_box_img = pygame.transform.scale(health_box_img, (35, 35))
+wall_img = pygame.transform.scale(wall_img, (100, 100))
 item_boxes = {'Health': health_box_img}
 
+start_btn_rect = pygame.Rect(300, 320, 200, 50)
 
-# NEW: wall image
-wall_img = pygame.image.load('img/wall.png').convert_alpha()
-wall_img = pygame.transform.scale(wall_img, (100, 100))
-
-# Member 3: start button area
-start_btn_rect = pygame.Rect(300, 320, 200, 50) #rect place and size
-
-# Member 3: draw text
 def draw_text(text, font, text_col, x, y, center=False):
-    img = font.render(text, True, text_col)  #let font become pic
+    img = font.render(text, True, text_col)
     if center:
-        rect = img.get_rect(center=(x, y)) #center
-        screen.blit(img, rect) #draw it at middle
+        rect = img.get_rect(center=(x, y))
+        screen.blit(img, rect)
     else:
-        screen.blit(img, (x, y)) #draw
+        screen.blit(img, (x, y))
 
 # ==================== PLAYER CLASS ====================
-# Member 1: player movement and shooting
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, health):
-        pygame.sprite.Sprite.__init__(self)
+        super().__init__()
         self.alive = True
         self.speed = speed       
         self.health = health
@@ -115,59 +113,83 @@ class Player(pygame.sprite.Sprite):
         self.direction = 1         
         self.flip = False           
 
-        
         self.animation_list = []
         self.frame_index = 0
         self.action = 0
         self.update_time = pygame.time.get_ticks()
+        
         for animation in ['Idle', 'Run', 'Death']:
             temp_list = []
-            num_of_frames = len(os.listdir(f'img/player1/{animation}'))
-            for i in range(num_of_frames):
-                img = pygame.image.load(f'img/player1/{animation}/{i}.png').convert_alpha()
-                img = pygame.transform.scale(img, (80, 80))
-                temp_list.append(img)
+            path = f'img/player1/{animation}'
+            if os.path.exists(path):
+                num_of_frames = len(os.listdir(path))
+                for i in range(num_of_frames):
+                    img = pygame.image.load(f'{path}/{i}.png').convert_alpha()
+                    img = pygame.transform.scale(img, (80, 80))
+                    temp_list.append(img)
+            else:
+                for _ in range(4):
+                    surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+                    pygame.draw.rect(surf, GREEN if animation != 'Death' else RED, (10, 10, 60, 60))
+                    temp_list.append(surf)
             self.animation_list.append(temp_list)
+            
         self.image = self.animation_list[self.action][self.frame_index]
-        self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
+        self.rect = self.image.get_rect(center=(x, y))
 
     def update(self):
         self.update_animation()
         self.check_alive()
 
-    # Member 1: (WASD)
     def move(self, keys):
+        if not self.alive: return
+        
+        dx = 0
+        dy = 0
+        
         if keys[pygame.K_a]:
-            self.rect.x -= self.speed
+            dx = -self.speed
             self.flip = True
             self.direction = -1
         if keys[pygame.K_d]:
-            self.rect.x += self.speed
+            dx = self.speed
             self.flip = False
             self.direction = 1
         if keys[pygame.K_w]:
-            self.rect.y -= self.speed
+            dy = -self.speed
         if keys[pygame.K_s]:
-            self.rect.y += self.speed
+            dy = self.speed
 
-       
-        self.rect.left = max(0, self.rect.left)
-        self.rect.right = min(WIDTH, self.rect.right)
-        self.rect.top = max(0, self.rect.top)
-        self.rect.bottom = min(HEIGHT, self.rect.bottom)
+        # --- X Movement & Wall Collision Detection ---
+        self.rect.x += dx
+        if self.rect.left < 0: self.rect.left = 0
+        if self.rect.right > WIDTH: self.rect.right = WIDTH
+        
+        hit_walls = pygame.sprite.spritecollide(self, wall_group, False)
+        for wall in hit_walls:
+            if dx > 0: self.rect.right = wall.rect.left   # Snaps to left side of wall
+            if dx < 0: self.rect.left = wall.rect.right   # Snaps to right side of wall
 
-        moving = (keys[pygame.K_a] or keys[pygame.K_d] or keys[pygame.K_w] or keys[pygame.K_s])
+        # --- Y Movement & Wall Collision Detection ---
+        self.rect.y += dy
+        if self.rect.top < 0: self.rect.top = 0
+        if self.rect.bottom > HEIGHT: self.rect.bottom = HEIGHT
+        
+        hit_walls = pygame.sprite.spritecollide(self, wall_group, False)
+        for wall in hit_walls:
+            if dy > 0: self.rect.bottom = wall.rect.top   # Snaps to top side of wall
+            if dy < 0: self.rect.top = wall.rect.bottom   # Snaps to bottom side of wall
+
+        moving = (dx != 0 or dy != 0)
         self.update_action(1 if moving else 0)
 
-    # Member 1: shooting
     def shoot(self):
         global total_shots
-        total_shots += 1
-        bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
-        bullet_group.add(bullet)
+        if self.alive:
+            total_shots += 1
+            bullet = Bullet(self.rect.centerx, self.rect.centery, self.direction)
+            bullet_group.add(bullet)
 
-   
     def update_animation(self):
         ANIMATION_COOLDOWN = 100
         self.image = self.animation_list[self.action][self.frame_index]
@@ -186,63 +208,81 @@ class Player(pygame.sprite.Sprite):
     def check_alive(self):
         if self.health <= 0:
             self.health = 0
-            self.alive = False
-            self.update_action(2)
+            if self.alive:
+                self.alive = False
+                self.update_action(2)
 
     def draw(self):
         screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
 
 # ==================== ENEMY CLASS ====================
-# Member 2: enemy ai behavior敌人AI行为、动画、难度参数
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        pygame.sprite.Sprite.__init__(self)
+        super().__init__()
         self.alive = True
         self.health = current_enemy_health        
-        self.direction = 1 #方向 1右边，-1左边
-        self.flip = False #是否反转图片
+        self.flip = False 
         
-        self.animation_list = [] #存所有动画帧
-        self.frame_index = 0 #当前播放的帧
-        self.action = 0 #当前动作
-        self.update_time = pygame.time.get_ticks() #上一次更新动画的时间
-        self.shoot_timer = random.randint(0, current_shoot_delay)   #随机射击计时器
+        self.animation_list = [] 
+        self.frame_index = 0 
+        self.action = 0 
+        self.update_time = pygame.time.get_ticks() 
+        self.shoot_timer = random.randint(0, int(current_shoot_delay))
 
         for animation in ['Idle', 'Run', 'Death']:
             temp_list = []
-            num_of_frames = len(os.listdir(f'img/enemy1/{animation}')) #读取file里面图片数量
-            for i in range(num_of_frames): 
-                img = pygame.image.load(f'img/enemy1/{animation}/{i}.png').convert_alpha()
-                img = pygame.transform.scale(img, (80, 80)) #缩放到80x80
-                temp_list.append(img) #加入列表
-            self.animation_list.append(temp_list) #将整个动作序列加入动画列表
+            path = f'img/enemy1/{animation}'
+            if os.path.exists(path):
+                num_of_frames = len(os.listdir(path))
+                for i in range(num_of_frames):
+                    img = pygame.image.load(f'{path}/{i}.png').convert_alpha()
+                    img = pygame.transform.scale(img, (80, 80))
+                    temp_list.append(img)
+            else:
+                for _ in range(4):
+                    surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+                    pygame.draw.rect(surf, RED if animation != 'Death' else WHITE, (10, 10, 60, 60))
+                    temp_list.append(surf)
+            self.animation_list.append(temp_list)
+            
         self.image = self.animation_list[self.action][self.frame_index]
-        self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
+        self.rect = self.image.get_rect(center=(x, y))
 
-    def update(self, time_scale): #每帧更新
+    def update(self, time_scale): 
         self.update_animation()
-        self.check_alive() #检查是否死亡
-        if not self.alive: #if dead，不再移动/射击
+        self.check_alive() 
+        if not self.alive: 
             return
         
-        #往玩家方向移动
-        dx = player.rect.centerx - self.rect.centerx #水平距离差
-        dy = player.rect.centery - self.rect.centery #垂直
-        distance = math.hypot(dx, dy) #欧氏距离
-        if distance > 0: #避免除以0
-            #移动：单位向量x当前敌人速度x时标（慢动作）
-            self.rect.x += (dx / distance) * current_enemy_speed * time_scale
-            self.rect.y += (dy / distance) * current_enemy_speed * time_scale
-        self.flip = dx < 0 #如果复数 玩家在左边，反转照片
-        self.update_action(1) #设置为跑步动作（1）         
+        dx = player.rect.centerx - self.rect.centerx 
+        dy = player.rect.centery - self.rect.centery 
+        distance = math.hypot(dx, dy) 
+        
+        if distance > 0: 
+            step_x = (dx / distance) * current_enemy_speed * time_scale
+            step_y = (dy / distance) * current_enemy_speed * time_scale
+            
+            # --- Enemy X Wall Collision Detection ---
+            self.rect.x += step_x
+            hit_walls = pygame.sprite.spritecollide(self, wall_group, False)
+            for wall in hit_walls:
+                if step_x > 0: self.rect.right = wall.rect.left
+                if step_x < 0: self.rect.left = wall.rect.right
+                    
+            # --- Enemy Y Wall Collision Detection ---
+            self.rect.y += step_y
+            hit_walls = pygame.sprite.spritecollide(self, wall_group, False)
+            for wall in hit_walls:
+                if step_y > 0: self.rect.bottom = wall.rect.top
+                if step_y < 0: self.rect.top = wall.rect.bottom
+                
+        self.flip = dx < 0 
+        self.update_action(1)         
         
         self.shoot_timer += 1 * time_scale
         if self.shoot_timer >= current_shoot_delay and distance > 0:
             self.shoot_timer = 0
-            #create bullet ，方向指向玩家
-            bullet = EnemyBullet(self.rect.centerx, self.rect.centery,
-                                 dx/distance, dy/distance)
+            bullet = EnemyBullet(self.rect.centerx, self.rect.centery, dx/distance, dy/distance)
             enemy_bullet_group.add(bullet)
 
     def update_animation(self):
@@ -250,36 +290,35 @@ class Enemy(pygame.sprite.Sprite):
         self.image = self.animation_list[self.action][self.frame_index]
         if pygame.time.get_ticks() - self.update_time > ANIMATION_COOLDOWN:
             self.update_time = pygame.time.get_ticks()
-            self.frame_index += 1 #下一帧
+            self.frame_index += 1 
         if self.frame_index >= len(self.animation_list[self.action]):
             self.frame_index = 0 if self.action != 2 else len(self.animation_list[self.action]) - 1
 
-    def update_action(self, new_action): #换动作
+    def update_action(self, new_action): 
         if new_action != self.action:
             self.action = new_action
             self.frame_index = 0
             self.update_time = pygame.time.get_ticks()
 
-    def check_alive(self): #检查生命，if 死亡就加分，增加击杀数，random掉血包
+    def check_alive(self): 
         global score, total_kills
         if self.health <= 0 and self.alive:
             self.alive = False
-            self.update_action(2) #切换到死亡动画
-            score += 25 #增加分数
-            total_kills += 1 #击杀数加一
-            # 随机掉落血包
-            if random.randint(1,3) == 1: #三分之一的概率掉落血包
+            self.update_action(2) 
+            score += 25 * score_multiplier
+            total_kills += 1 
+            if random.randint(1, 3) == 1: 
                 item_box_group.add(ItemBox('Health', self.rect.centerx, self.rect.centery))
+            self.kill()
 
     def draw(self):
         screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
 
 # ==================== BULLET CLASSES ====================
-# Member 1: player bullet
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__()
-        self.speed = 6
+        self.speed = 8
         self.image = bullet_img
         self.rect = self.image.get_rect(center=(x, y))
         self.direction = direction
@@ -287,8 +326,16 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         global total_hits
         self.rect.x += self.direction * self.speed
+        
         if self.rect.right < 0 or self.rect.left > WIDTH:
             self.kill()
+            return
+
+        # Bullet vs Wall Collision Detection
+        if pygame.sprite.spritecollide(self, wall_group, False):
+            self.kill()
+            return
+            
         for enemy in enemy_group:
             if self.rect.colliderect(enemy.rect) and enemy.alive:
                 enemy.health -= 50
@@ -296,40 +343,45 @@ class Bullet(pygame.sprite.Sprite):
                 self.kill()
                 break
 
-# Member 2: 敌人子弹系统enemy bullet
 class EnemyBullet(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy):
         super().__init__()
-        self.speed = current_enemy_bullet_speed   # 难度影响子弹速度
-        self.dx = dx #水平方向
-        self.dy = dy #垂直方向
+        self.speed = current_enemy_bullet_speed   
+        self.dx = dx 
+        self.dy = dy 
         self.image = enemy_bullet_img 
-        self.rect = self.image.get_rect(center=(x, y)) #设置初始位置
+        self.rect = self.image.get_rect(center=(x, y)) 
 
     def update(self, time_scale):
-        self.rect.x += self.dx * self.speed * time_scale #x方向移动
-        self.rect.y += self.dy * self.speed * time_scale #y方向移动
-        if not self.rect.colliderect(0, 0, WIDTH, HEIGHT): #if子弹超出screen，kill
+        self.rect.x += self.dx * self.speed * time_scale 
+        self.rect.y += self.dy * self.speed * time_scale 
+        
+        if not self.rect.colliderect(0, 0, WIDTH, HEIGHT): 
             self.kill()
-        if self.rect.colliderect(player) and player.alive: #如果hit玩家且玩家活着
-            player.health -= 15          # 子弹伤害（15）
-            self.kill() #子弹消失
+            return
 
-# Member 3: colectable item (health)
+        # Enemy Bullet vs Wall Collision Detection
+        if pygame.sprite.spritecollide(self, wall_group, False):
+            self.kill()
+            return
+            
+        if self.rect.colliderect(player.rect) and player.alive: 
+            player.health -= 15          
+            self.kill() 
+
+# ==================== ITEM BOX CLASS ====================
 class ItemBox(pygame.sprite.Sprite):
     def __init__(self, item_type, x, y):
         super().__init__()
         self.item_type = item_type 
-        self.image = item_boxes[item_type] #load pic
-        self.rect = self.image.get_rect(center=(x, y)) #set the place 
+        self.image = item_boxes[item_type] 
+        self.rect = self.image.get_rect(center=(x, y)) 
 
-    def update(self): #check if player collect it
-        if self.rect.colliderect(player) and player.alive:
+    def update(self): 
+        if self.rect.colliderect(player.rect) and player.alive:
             if self.item_type == 'Health':
-                #add 25 health,not over max health
                 player.health = min(player.max_health, player.health + 25)
-            self.kill() #gone after collected 
-
+            self.kill() 
 
 # ==================== WALL CLASS ====================
 class Wall(pygame.sprite.Sprite):
@@ -338,70 +390,54 @@ class Wall(pygame.sprite.Sprite):
         self.image = wall_img
         self.rect = self.image.get_rect(center=(x, y))
 
-    def update(self):
-        pass
-
 # ==================== HEALTH BAR ====================
-# Member 3: UI 血条
 class HealthBar:
     def __init__(self, x, y, health, max_health):
-        self.x = x #healthbar 左上角x 
-        self.y = y #healthbar 左上角y
+        self.x = x 
+        self.y = y 
         self.max_health = max_health 
     def draw(self, health):
-        ratio = health / self.max_health #生命值比例
-        #draw red background
+        ratio = health / self.max_health 
         pygame.draw.rect(screen, RED, (self.x, self.y, 150, 20))
-        #draw green front
         pygame.draw.rect(screen, GREEN, (self.x, self.y, 150 * ratio, 20))
 
 # ==================== GROUPS ====================
-
 bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 item_box_group = pygame.sprite.Group()
-
-# NEW: wall group
 wall_group = pygame.sprite.Group()
-wall_group.add(Wall(200, 300))   # first wall
-wall_group.add(Wall(600, 300))   # second wall
+
+# Generating your two physical walls
+wall_group.add(Wall(200, 300))   
+wall_group.add(Wall(600, 300))   
 
 # ==================== LEVEL & DIFFICULTY ====================
-# Member 2: enemy ai敌人生成、level关卡控制、难度平衡difficulty balancing
 def create_enemy(): 
-    #在screen外随机生成敌人
-    side = random.choice(["top","bottom","left","right"]) #随机选择边缘
-    if side == "top": x, y = random.randint(0, WIDTH), -50 #上方外部
-    elif side == "bottom": x, y = random.randint(0, WIDTH), HEIGHT + 50 #下方外部
-    elif side == "left": x, y = -50, random.randint(0, HEIGHT) #左侧外部
-    else: x, y = WIDTH + 50, random.randint(0, HEIGHT) #右侧外部
-    enemy_group.add(Enemy(x, y)) #create 敌人并加入组
-#开始指定level，清空all敌人，生成当前等级+1个敌人
+    side = random.choice(["top","bottom","left","right"]) 
+    if side == "top": x, y = random.randint(0, WIDTH), -50 
+    elif side == "bottom": x, y = random.randint(0, WIDTH), HEIGHT + 50 
+    elif side == "left": x, y = -50, random.randint(0, HEIGHT) 
+    else: x, y = WIDTH + 50, random.randint(0, HEIGHT) 
+    enemy_group.add(Enemy(x, y)) 
+
 def start_level(current_level):
-    enemy_group.empty() #清空现有敌人
-    for _ in range(current_level + 1): #敌人数= 等级+1
+    enemy_group.empty() 
+    for _ in range(current_level + 1): 
         create_enemy()
 
 def next_level():
-    #难度平衡：每级增加敌人速度、减少射击延迟、增加生命值和子弹速度
     global level, score_multiplier
     global current_enemy_speed, current_shoot_delay, current_enemy_health, current_enemy_bullet_speed
-    level += 1 #等级加一
-    #敌人移动速度每level+0.25，不超过上限
+    level += 1 
     current_enemy_speed = min(current_enemy_speed + 0.25, MAX_ENEMY_SPEED)
-    #射击延迟每级-3帧，不低于下限
     current_shoot_delay = max(current_shoot_delay - 3, MIN_SHOOT_DELAY)
-    #敌人生命值每级+10，不超过上限
     current_enemy_health = min(current_enemy_health + 10, MAX_ENEMY_HEALTH)
-    #敌人子弹速度每级+0.2，不超过上限
     current_enemy_bullet_speed = min(current_enemy_bullet_speed + 0.2, MAX_ENEMY_BULLET_SPEED)
-    #得分倍数增加，让后期得分更快
     score_multiplier += 0.15
-    #清空所有子弹（必变残留）
     bullet_group.empty()
     enemy_bullet_group.empty()
-    start_level(level) #生成新等级的敌人
+    start_level(level) 
 
 def reset_game():
     global player, health_bar, level, score, score_multiplier, game_state, next_level_ready
@@ -410,8 +446,8 @@ def reset_game():
     bullet_group.empty()
     enemy_bullet_group.empty()
     item_box_group.empty()
-    #重新create character
-    player = Player(WIDTH//2, HEIGHT//2, 3, 100)
+    
+    player = Player(WIDTH//2, HEIGHT//2, 4, 100)
     health_bar = HealthBar(10, 10, player.health, player.max_health)
     level = 1
     score = 0
@@ -428,14 +464,12 @@ def reset_game():
     game_state = "PLAYING"
 
 # ==================== UI SCREENS ====================
-# Member 3: result screen and next level screen
 def show_result_screen():
-    #命中率
     hit_rate = (total_hits / total_shots * 100) if total_shots > 0 else 0
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) #半透明黑色
-    overlay.fill((0,0,0,180))
-    screen.blit(overlay, (0,0))
-    draw_text("GAME OVER", large_font, RED, WIDTH//2, 80, center=True) #标题
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA) 
+    overlay.fill((0, 0, 0, 180))
+    screen.blit(overlay, (0, 0))
+    draw_text("GAME OVER", large_font, RED, WIDTH//2, 80, center=True) 
     stats = [
         f"Final Score: {int(score)}",
         f"Level Reached: {level}",
@@ -452,100 +486,85 @@ def show_result_screen():
 
 def show_level_transition():
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0,0,0,200))
-    screen.blit(overlay, (0,0))
+    overlay.fill((0, 0, 0, 200))
+    screen.blit(overlay, (0, 0))
     draw_text("NEXT LEVEL", large_font, YELLOW, WIDTH//2, HEIGHT//2 - 50, center=True)
     draw_text(f"You reached Level {level} !", font, WHITE, WIDTH//2, HEIGHT//2 + 20, center=True)
     draw_text("Press ENTER to continue", small_font, GREEN, WIDTH//2, HEIGHT//2 + 100, center=True)
 
 # ==================== INIT ====================
 reset_game()
-game_state = "START"   # start from main menu
+game_state = "START"   
 
 # ==================== MAIN LOOP ====================
 while True:
     clock.tick(FPS)
-    screen.blit(bg_img, (0,0))
+    screen.blit(bg_img, (0, 0))
 
-    # -------------------- event --------------------
+    # -------------------- Events --------------------
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
-        # mouse click：start button / shooting in while playing
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if game_state == "START":
                 if start_btn_rect.collidepoint(event.pos):
                     reset_game()
             elif game_state == "PLAYING":
-                if player.alive:
-                    player.shoot()          # Member 1 shooting
+                player.shoot()          
 
-        # keyboard
         if event.type == pygame.KEYDOWN:
             if game_state == "PLAYING" and event.key == pygame.K_f:
-                player.shoot()              # Member 1 shoot by press keyboard
+                player.shoot()              
             elif game_state == "LEVEL_TRANSITION" and event.key == pygame.K_RETURN:
-                next_level()                # Member 2 press enter to next level
+                next_level()                
                 game_state = "PLAYING"
                 next_level_ready = False
             elif game_state == "RESULT":
                 if event.key == pygame.K_r:
-                    reset_game()            # Member 3 restart game
+                    reset_game()            
                 elif event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
             elif game_state == "START" and event.key == pygame.K_RETURN:
                 reset_game()
 
-    # -------------------- update --------------------
+    # -------------------- Update & Draw Loops --------------------
     if game_state == "START":
-        draw_text("STILL——WORLD", font, WHITE, 250, 220)
+        draw_text("STILL WORLD", large_font, WHITE, WIDTH//2, 220, center=True)
         pygame.draw.rect(screen, GRAY, start_btn_rect)
         draw_text("Start Game", small_font, WHITE, start_btn_rect.x+45, start_btn_rect.y+15)
         draw_text("Click or Press Enter", small_font, WHITE, WIDTH//2, 420, center=True)
 
     elif game_state == "PLAYING":
         keys = pygame.key.get_pressed()
-        time_scale = 1.0 if any(keys[k] for k in (pygame.K_w,pygame.K_s,pygame.K_a,pygame.K_d)) else 0.08
+        time_scale = 1.0 if any(keys[k] for k in (pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d)) else 0.08
 
         if not next_level_ready and score >= level * 100:
             game_state = "LEVEL_TRANSITION"
             next_level_ready = True
             continue
 
-        if player.alive:
-            player.move(keys)
-            player.update()
-            player.draw()
-            health_bar.draw(player.health)
-
-        for enemy in enemy_group:
-            enemy.update(time_scale)
-            enemy.draw()
-
-        # Player collision with walls
-        if pygame.sprite.spritecollide(player, wall_group, False):
-            player.rect.x -= player.direction * player.speed
-
-        # Enemy collision with walls
-        for enemy in enemy_group:
-            if pygame.sprite.spritecollide(enemy, wall_group, False):
-                enemy.rect.x -= (enemy.direction * current_enemy_speed)
+        player.move(keys)
+        player.update()
+        player.draw()
+        health_bar.draw(player.health)
 
         for enemy in list(enemy_group):
-            if pygame.sprite.collide_rect(player, enemy) and enemy.alive and player.alive:
+            enemy.update(time_scale)
+            if enemy.alive:
+                enemy.draw()
+
+        # Direct Player-Enemy Contact Collision
+        for enemy in list(enemy_group):
+            if player.rect.colliderect(enemy.rect) and enemy.alive and player.alive:
                 player.health -= 25
-                score += 25
+                score += 25 * score_multiplier
                 total_kills += 1
-                if random.randint(1,3) == 1:
+                if random.randint(1, 3) == 1:
                     item_box_group.add(ItemBox('Health', enemy.rect.centerx, enemy.rect.centery))
                 enemy.kill()
-                if player.health <= 0:
-                    player.alive = False
-                    player.update_action(2)
-                    game_state = "RESULT"
                 break
 
         bullet_group.update()
@@ -554,18 +573,8 @@ while True:
         enemy_bullet_group.draw(screen)
         item_box_group.update()
         item_box_group.draw(screen)
-
-        # Player bullets vs walls
-        for bullet in list(bullet_group):
-            if pygame.sprite.spritecollide(bullet, wall_group, False):
-                bullet.kill()
-
-        # Enemy bullets vs walls
-        for e_bullet in list(enemy_bullet_group):
-            if pygame.sprite.spritecollide(e_bullet, wall_group, False):
-                e_bullet.kill()
-
-        # Draw walls
+        
+        # Rendering static environment layers
         wall_group.draw(screen)
 
         score += 0.1 * time_scale * score_multiplier
@@ -579,21 +588,17 @@ while True:
         draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
 
     elif game_state == "LEVEL_TRANSITION":
-        if player.alive:
-            player.update()
-            player.draw()
-            health_bar.draw(player.health)
+        player.draw()
+        health_bar.draw(player.health)
         for enemy in enemy_group:
-            enemy.update(0)
             enemy.draw()
         bullet_group.draw(screen)
         enemy_bullet_group.draw(screen)
         item_box_group.draw(screen)
         wall_group.draw(screen)
+        
         draw_text(f"Score: {int(score)}", small_font, WHITE, 10, 40)
         draw_text(f"Level: {level}", small_font, GREEN, 10, 70)
-        draw_text(f"Enemies: {len(enemy_group)}", small_font, WHITE, 10, 100)
-        draw_text(f"Shots: {total_shots}  Hits: {total_hits}", small_font, WHITE, 10, 130)
         show_level_transition()
 
     elif game_state == "RESULT":
