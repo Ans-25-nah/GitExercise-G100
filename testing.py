@@ -129,7 +129,7 @@ class Player(pygame.sprite.Sprite):
         self.update_animation()
         self.check_alive()
 
-    def move(self, keys, time_scale=1.0):
+    def move(self, keys, time_scale=1.0):  # week13
         if keys[pygame.K_a]:
             self.rect.x -= self.speed * time_scale
             self.flip = True
@@ -604,7 +604,7 @@ def reset_game():
     enemy_bullet_group.empty()
     item_box_group.empty()
     floating_text_group.empty()  # new added 把屏幕上旧 “Hit” 字全部清空---------------
-    player = Player(WIDTH//2, HEIGHT//2, 5, 100)
+    player = Player(WIDTH//2, HEIGHT//2, 3, 100)  # week13 :5 is speed
     health_bar = HealthBar(10, 10, player.health, player.max_health)
     level = 1
     score = 0
@@ -717,7 +717,7 @@ while True:
             continue
 
         if player.alive:
-            player.move(keys, time_scale)
+            player.move(keys, time_scale)  # week13
             player.update()
             player.draw()
             health_bar.draw(player.health)
